@@ -1,0 +1,136 @@
+---
+title: "Patient-Simulation"
+author: "Bilal, Shaikh"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+header-includes: \linespread{1}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Purpose
+
+This file simulates the patient dataset behind the disease trend prediction. It writes one CSV to `../data/patients.csv`, and the Java application reads only that CSV.
+
+# Assumptions
+
+- **States:** `healthy`, `infected`, `recovered`.
+- **Time step:** one month. Consecutive rows of a patient are exactly one month apart.
+- **Model:** a time-homogeneous Markov chain, so the transition probabilities do not change over time and each patient moves independently of the others.
+- **Transition matrix:** column-stochastic. Entry (i, j) is the probability of moving from state j to state i in one month, and each column sums to 1.
+- **Allowed moves:** healthy to healthy or infected; infected to infected or recovered; recovered to recovered, healthy or infected. Every other probability is 0. The probabilities are placeholders.
+- **Patients:** each starts in a random state drawn with fixed weights, and has 2 or 3 observations, chosen uniformly.
+- **Diagonalizability:** the true matrix, and the matrix re-estimated from the simulated data, must have real, pairwise distinct eigenvalues (imaginary parts and gaps within the tolerance count as zero). If either check fails, knitting stops with an error before the CSV is written.
+
+# CSV format
+
+Comma-separated, with a header and no quoting. One row per observation, with the columns `patient-id`, `time-step` and `state`. The rows of a patient are consecutive and in time order, and `time-step` starts at 0.
+
+# Settings
+
+```{r settings}
+set.seed(1111)
+
+n_patients <- 1000
+min_entries <- 2
+max_entries <- 3
+tolerance <- 1e-6
+output_path <- "../data/patients.csv"
+
+states <- c("healthy", "infected", "recovered")
+start_weights <- c(healthy = 0.75, infected = 0.20, recovered = 0.05)
+
+# Column j holds the probabilities of moving from state j.
+true_matrix <- matrix(
+  c(0.90, 0.00, 0.20,
+    0.10, 0.30, 0.05,
+    0.00, 0.70, 0.75),
+  nrow = 3, byrow = TRUE,
+  dimnames = list(to = states, from = states)
+)
+```
+
+# Checks on the settings and the true matrix
+
+```{r check-true-matrix}
+# Stops unless the matrix has real, pairwise distinct eigenvalues, which makes it diagonalizable over the reals.
+check_diagonalizable <- function(transition_matrix, tolerance) {
+  values <- eigen(transition_matrix)$values
+  if (any(abs(Im(values)) > tolerance)) {
+    stop("The matrix has complex eigenvalues, so it is not diagonalizable over the reals")
+  }
+  values <- sort(Re(values), decreasing = TRUE)
+  if (any(abs(diff(values)) <= tolerance)) {
+    stop("The matrix has repeated eigenvalues, so diagonalizability is not guaranteed")
+  }
+  values
+}
+
+stopifnot(
+  identical(names(start_weights), states),
+  abs(sum(start_weights) - 1) < 1e-12,
+  all(true_matrix >= 0),
+  all(abs(colSums(true_matrix) - 1) < 1e-12)
+)
+true_eigenvalues <- check_diagonalizable(true_matrix, tolerance)
+true_eigenvalues
+```
+
+# Simulation
+
+```{r simulate}
+# One patient's states, month by month, starting from start_state.
+simulate_patient <- function(start_state, n_entries) {
+  path <- character(n_entries)
+  path[1] <- start_state
+  for (t in seq_len(n_entries - 1) + 1) {
+    path[t] <- sample(states, 1, prob = true_matrix[, path[t - 1]])
+  }
+  path
+}
+
+n_entries <- sample(min_entries:max_entries, n_patients, replace = TRUE)
+start_states <- sample(states, n_patients, replace = TRUE, prob = start_weights)
+paths <- mapply(simulate_patient, start_states, n_entries, SIMPLIFY = FALSE, USE.NAMES = FALSE)
+
+patients <- data.frame(
+  patient_id = rep(seq_len(n_patients), times = n_entries),
+  time_step = unlist(lapply(n_entries, function(k) seq_len(k) - 1)),
+  state = unlist(paths)
+)
+names(patients) <- c("patient-id", "time-step", "state")
+head(patients, 10)
+```
+
+# Check on the estimated matrix
+
+The matrix is estimated the way the Java side will: count the moves between consecutive rows of the same patient, then divide each column by its total.
+
+```{r estimate}
+from_rows <- seq_len(nrow(patients) - 1)
+to_rows <- from_rows + 1
+same_patient <- patients[["patient-id"]][from_rows] == patients[["patient-id"]][to_rows]
+
+counts <- unclass(table(
+  to = factor(patients$state[to_rows][same_patient], levels = states),
+  from = factor(patients$state[from_rows][same_patient], levels = states)
+))
+stopifnot("Every state needs at least one outgoing transition in the data" = all(colSums(counts) > 0))
+
+estimated_matrix <- counts / rep(colSums(counts), each = nrow(counts))
+round(estimated_matrix, 3)
+
+estimated_eigenvalues <- check_diagonalizable(estimated_matrix, tolerance)
+estimated_eigenvalues
+```
+
+# Output
+
+```{r write-csv}
+dir.create(dirname(output_path), showWarnings = FALSE, recursive = TRUE)
+write.csv(patients, output_path, row.names = FALSE, quote = FALSE)
+```
