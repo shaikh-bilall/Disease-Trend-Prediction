@@ -1,4 +1,4 @@
-package logic;
+package storage;
 
 public class CacheCheck {
 }
