@@ -1,5 +1,7 @@
 package domain;
 
+import domain.exceptions.MissingPatientHistoryListException;
+import domain.exceptions.NullObservationInPatientHistoryException;
 import com.google.common.base.Preconditions;
 
 import java.util.List;
@@ -13,21 +15,29 @@ import java.util.List;
 public record PatientHistory(int patientId, List<HealthState> stateHistory) {
 
     /**
-     * Creates a patient history, keeping an independent copy of the states.
+     * Creates a patient history with an immutable copy of the observed states.
      *
-     * @param patientId    the identifier of the patient, which must not be negative
-     * @param stateHistory the patient's states in time order, with at least one entry
-     * @throws NullPointerException  if {@code stateHistory} or any of its elements is {@code null}
-     * @throws IllegalStateException if {@code patientId} is negative or {@code stateHistory} is empty
+     * @param patientId the non-negative patient identifier
+     * @param stateHistory the observed states in time order, with at least one entry
+     * @throws MissingPatientHistoryListException if {@code stateHistory} is {@code null}
+     * @throws NullObservationInPatientHistoryException if the list contains a {@code null} entry
+     * @throws IllegalStateException if {@code patientId} is negative or the history is empty
      */
     public PatientHistory(
             final int patientId,
             final List<HealthState> stateHistory
     ) {
-        Preconditions.checkNotNull(stateHistory, "State history must not be null");
+        if (stateHistory == null) {
+            throw new MissingPatientHistoryListException();
+        }
 
         this.patientId = patientId;
-        this.stateHistory = List.copyOf(stateHistory);
+        try {
+            this.stateHistory = List.copyOf(stateHistory);
+        } catch (NullPointerException e) {
+            throw new NullObservationInPatientHistoryException();
+        }
+
         checkPatientHistory();
     }
 

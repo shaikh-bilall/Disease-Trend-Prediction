@@ -1,5 +1,6 @@
 package domain;
 
+import domain.exceptions.NullTransitionMatrixException;
 import com.google.common.base.Preconditions;
 
 /**
@@ -15,17 +16,21 @@ public record MarkovModel(Matrix model) {
     private static final double COLUMN_SUM_TOLERANCE = 1e-9;
 
     /**
-     * Creates a model from a transition matrix, keeping an independent copy of it.
+     * Creates a Markov model from an independent copy of the transition matrix.
      *
-     * @param model the column-stochastic transition matrix, with one row and column per health state
-     * @throws NullPointerException  if {@code model} is {@code null}
-     * @throws IllegalStateException if the matrix is not square, its size differs from the number of health states,
-     *                               an entry is negative, or a column does not sum to 1
+     * @param model the column-stochastic transition matrix
+     * @throws NullTransitionMatrixException if {@code model} is {@code null}
+     * @throws IllegalStateException if the matrix is not square, its size differs
+     *         from the number of health states, an entry is negative or NaN,
+     *         or a column sum falls outside the tolerance around {@code 1.0}
      */
     public MarkovModel(
             final Matrix model
     ) {
-        Preconditions.checkNotNull(model, "Model must not be null");
+        if (model == null) {
+            throw new NullTransitionMatrixException();
+        }
+
         this.model = model.copy();
         checkMarkovModel();
     }

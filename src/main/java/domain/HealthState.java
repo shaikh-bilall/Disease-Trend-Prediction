@@ -1,6 +1,7 @@
 package domain;
 
-import com.google.common.base.Preconditions;
+import domain.exceptions.NullHealthStateLabelException;
+import domain.exceptions.UnknownHealthStateLabelException;
 import com.google.common.collect.Maps;
 
 import java.util.Arrays;
@@ -36,19 +37,24 @@ public enum HealthState {
         return label;
     }
     /**
-     * Returns the state with a given label.
+     * Returns the health state whose label exactly matches the supplied label.
      *
-     * @param label the label to look up, exactly as returned by {@link #label()}
-     * @return the matching state
-     * @throws NullPointerException     if {@code label} is {@code null}
-     * @throws IllegalArgumentException if no state has that label
+     * @param label the case-sensitive label to look up
+     * @return the matching health state
+     * @throws NullHealthStateLabelException if {@code label} is {@code null}
+     * @throws UnknownHealthStateLabelException if no state has that label
      */
     public static HealthState fromLabel(
             final String label
     ) {
-        Preconditions.checkNotNull(label, "Label must not be null");
+        if (label == null) {
+            throw new NullHealthStateLabelException();
+        }
+
         final HealthState state = BY_LABEL.get(label);
-        Preconditions.checkArgument(state != null, "Unknown health state label: %s", label);
+        if (state == null) {
+            throw new UnknownHealthStateLabelException();
+        }
         return state;
     }
 
