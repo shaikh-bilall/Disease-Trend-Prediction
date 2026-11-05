@@ -16,9 +16,9 @@
 
     <dependencies>
         <dependency>
-            <groupId>ca.umanitoba.cs.shaikhb2</groupId>
-            <artifactId>LinearAlgebra</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <groupId>github.shaikh-bilall</groupId>
+            <artifactId>linear-algebra</artifactId>
+            <version>1.0.0</version>
         </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>
@@ -38,5 +38,10 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
-
+    <repositories>
+        <repository>
+            <id>github</id>
+            <url>https://maven.pkg.github.com/shaikh-bilall/Linear-Algebra</url>
+        </repository>
+    </repositories>
 </project>

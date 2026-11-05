@@ -1,6 +1,5 @@
 package domain;
 
-import ca.umanitoba.cs.shaikhb2.domain.Matrix;
 import com.google.common.base.Preconditions;
 
 /**

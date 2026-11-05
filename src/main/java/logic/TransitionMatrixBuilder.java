@@ -1,6 +1,6 @@
 package logic;
 
-import ca.umanitoba.cs.shaikhb2.domain.Matrix;
+import domain.Matrix;
 import com.google.common.base.Preconditions;
 import domain.HealthState;
 import domain.MarkovModel;

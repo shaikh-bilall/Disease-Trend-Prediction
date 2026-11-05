@@ -1,6 +1,5 @@
 package domain;
 
-import ca.umanitoba.cs.shaikhb2.domain.Vector;
 import com.google.common.base.Preconditions;
 
 import java.util.ArrayList;

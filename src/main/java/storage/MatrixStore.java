@@ -1,7 +1,7 @@
 package storage;
 
-import ca.umanitoba.cs.shaikhb2.domain.Diagonalization;
-import ca.umanitoba.cs.shaikhb2.domain.Matrix;
+import domain.Diagonalization;
+import domain.Matrix;
 import com.google.common.base.Preconditions;
 
 import java.io.BufferedReader;
