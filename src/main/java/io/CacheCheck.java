@@ -1,4 +1,4 @@
-package storage;
+package io;
 
 import com.google.common.base.Preconditions;
 
@@ -36,13 +36,20 @@ public final class CacheCheck {
         Preconditions.checkArgument(cachedFiles.length > 0, "At least one cached file is required");
 
         final FileTime sourceTime = Files.getLastModifiedTime(source);
-        for (Path cachedFile : cachedFiles) {
+        boolean allCachedFilesExistAndAreNew = true;
+        int i = 0;
+        while (allCachedFilesExistAndAreNew && i < cachedFiles.length) {
+            final Path cachedFile = cachedFiles[i];
             Preconditions.checkNotNull(cachedFile, "Cached file must not be null");
-            if (!Files.isRegularFile(cachedFile) || Files.getLastModifiedTime(cachedFile).compareTo(sourceTime) <= 0) {
-                return false;
+            if (
+                    !Files.isRegularFile(cachedFile) ||
+                    Files.getLastModifiedTime(cachedFile).compareTo(sourceTime) <= 0
+            ) {
+                allCachedFilesExistAndAreNew = false;
             }
+            i++;
         }
-        return true;
+        return allCachedFilesExistAndAreNew;
     }
 
 }

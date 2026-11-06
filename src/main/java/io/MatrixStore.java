@@ -1,4 +1,4 @@
-package storage;
+package io;
 
 import domain.Diagonalization;
 import domain.Matrix;
@@ -127,6 +127,7 @@ public final class MatrixStore {
         final Matrix inverseP = readMatrix(files.inverseP());
         try {
             return new Diagonalization(p, d, inverseP);
+
         } catch (IllegalStateException e) {
             throw new IllegalArgumentException(
                     "Invalid diagonalization in " + files.p() + ", " + files.d() + " and " + files.inverseP() + ": " + e.getMessage(), e);
@@ -156,7 +157,8 @@ public final class MatrixStore {
         final DiagonalizationFiles files = new DiagonalizationFiles(
                 resolveFile(directory, pFileName),
                 resolveFile(directory, dFileName),
-                resolveFile(directory, inversePFileName));
+                resolveFile(directory, inversePFileName)
+        );
         Preconditions.checkArgument(!files.p().equals(files.d()) && !files.p().equals(files.inverseP())
                 && !files.d().equals(files.inverseP()), "The three file names must be different");
         return files;

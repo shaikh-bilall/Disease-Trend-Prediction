@@ -1,4 +1,4 @@
-package storage;
+package io;
 
 public class MatrixStoreTest {
 }

@@ -35,20 +35,34 @@ public record MarkovModel(Matrix model) {
         checkMarkovModel();
     }
 
-    // Checks that the model is valid: one row and column per health state, and a column-stochastic matrix.
+    // Checks that the model has one row and column per health state, and a column-stochastic matrix.
     private void checkMarkovModel() {
-        Preconditions.checkNotNull(model, "Model must not be null");
-        Preconditions.checkState(model.rows() == model.cols(), "Model must be square");
-        Preconditions.checkState(model.rows() == HealthState.values().length, "Model size must match the number of health states");
+        Preconditions.checkNotNull(
+                model,
+                "Model must not be null"
+        );
+        Preconditions.checkState(
+                model.rows() == model.cols(),
+                "Model must be square"
+        );
+        Preconditions.checkState(
+                model.rows() == HealthState.values().length,
+                "Model size must match the number of health states"
+        );
         for (int col = 0; col < model.cols(); col++) {
             double sum = 0;
             for (int row = 0; row < model.rows(); row++) {
                 final double entry = model.get(row, col);
-                Preconditions.checkState(entry >= 0, "Model entries must be non-negative");
+                Preconditions.checkState(
+                        entry >= 0,
+                        "Model entries must be non-negative"
+                );
                 sum += entry;
             }
-            Preconditions.checkState(Math.abs(sum - 1) <= COLUMN_SUM_TOLERANCE,
-                    "Column %s of the model must sum to 1", col);
+            Preconditions.checkState(
+                    Math.abs(sum - 1) <= COLUMN_SUM_TOLERANCE,
+                    "Column %s of the model must sum to 1", col
+            );
         }
     }
 

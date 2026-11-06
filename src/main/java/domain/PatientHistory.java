@@ -43,9 +43,18 @@ public record PatientHistory(int patientId, List<HealthState> stateHistory) {
 
     // Checks that the history is valid: a non-negative patient id and at least one state.
     private void checkPatientHistory() {
-        Preconditions.checkNotNull(stateHistory, "State history must not be null");
-        Preconditions.checkState(patientId >= 0, "Patient id must be non-negative");
-        Preconditions.checkState(!stateHistory.isEmpty(), "State history must have at least one entry");
+        Preconditions.checkNotNull(
+                stateHistory,
+                "State history must not be null"
+        );
+        Preconditions.checkState(
+                patientId >= 0,
+                "Patient id must be non-negative"
+        );
+        Preconditions.checkState(
+                !stateHistory.isEmpty(),
+                "State history must have at least one entry"
+        );
     }
 
 }

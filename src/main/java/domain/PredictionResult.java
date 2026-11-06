@@ -72,14 +72,28 @@ public record PredictionResult(
         checkPredictionResult();
     }
 
-    // Checks that the result is valid: steps that make sense, and the right most likely states for the result.
+    // Checks that distributions, steps and most likely states are all valid.
     private void checkPredictionResult() {
-        Preconditions.checkNotNull(initial, "Initial distribution must not be null");
-        Preconditions.checkNotNull(result, "Result distribution must not be null");
-        Preconditions.checkNotNull(mostLikelyStates, "Most likely states must not be null");
-        Preconditions.checkState(steps >= 0, "Steps must be non-negative");
-        Preconditions.checkState(mostLikelyStates.equals(result.mostLikelyStates()),
-                "Most likely states must be the states tied for the highest probability, in state order");
+        Preconditions.checkNotNull(
+                initial,
+                "Initial distribution must not be null"
+        );
+        Preconditions.checkNotNull(
+                result,
+                "Result distribution must not be null"
+        );
+        Preconditions.checkNotNull(
+                mostLikelyStates,
+                "Most likely states must not be null"
+        );
+        Preconditions.checkState(
+                steps >= 0,
+                "Steps must be non-negative"
+        );
+        Preconditions.checkState(
+                mostLikelyStates.equals(result.mostLikelyStates()),
+                "states must be tied for the highest probability, in state order"
+        );
     }
 
 }

@@ -29,7 +29,11 @@ public final class TransitionMatrixBuilder {
      */
     public static MarkovModel build(
             final List<PatientHistory> patientHistories
-    ) {
+    )
+            throws NullPatientHistoriesException,
+            EmptyPatientHistoriesException,
+            NullPatientHistoryException
+    {
         if (patientHistories == null) {
             throw new NullPatientHistoriesException();
         }
@@ -37,9 +41,12 @@ public final class TransitionMatrixBuilder {
             throw new EmptyPatientHistoriesException();
         }
 
-        return new MarkovModel(new Matrix(normalizeColumns(countTransitions(patientHistories))));
+        return new MarkovModel(
+                new Matrix(
+                        normalizeColumns(countTransitions(patientHistories))
+                )
+        );
     }
-
     // Counts are indexed by destination state, then source state.
     private static double[][] countTransitions(
             final List<PatientHistory> patientHistories
@@ -64,7 +71,7 @@ public final class TransitionMatrixBuilder {
 
         return counts;
     }
-
+    // Produces a column-stochastic matrix of probabilities by normalizing the input matrix.
     private static double[][] normalizeColumns(
             final double[][] counts
     ) {

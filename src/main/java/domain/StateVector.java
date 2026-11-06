@@ -35,42 +35,8 @@ public record StateVector(Vector vector) {
         }
 
         this.vector = new Vector(vector.data().clone());
-        checkStateVector(this.vector);
+        checkStateVector();
     }
-
-    /**
-     * Returns an independent copy of the probabilities.
-     *
-     * @return a copy of the underlying vector
-     */
-    @Override
-    public Vector vector() {
-        return new Vector(vector.data().clone());
-    }
-
-    /**
-     * Checks whether the supplied vector has one probability per health state,
-     * has no negative probabilities, and sums to {@code 1.0} within the sum tolerance.
-     *
-     * @param vector the vector to test
-     * @return whether the vector represents a valid distribution
-     * @throws NullStateVectorException if {@code vector} is {@code null}
-     * @throws IllegalStateException if the supplied vector's storage has been corrupted
-     */
-    public static boolean isDistribution(
-            final Vector vector
-    ) {
-        if (vector == null) {
-            throw new NullStateVectorException();
-        }
-
-        return (
-            hasOneEntryPerState(vector) &&
-            hasNoNegativeProbabilities(vector) &&
-            sumsToOne(vector)
-        );
-    }
-
     /**
      * Returns the {@link HealthState}s whose probabilities are within the tie tolerance
      * of the highest probability.
@@ -91,11 +57,17 @@ public record StateVector(Vector vector) {
         }
         return List.copyOf(tied);
     }
-
+    /**
+     * Returns an independent copy of the probabilities.
+     *
+     * @return a copy of the underlying vector
+     */
+    @Override
+    public Vector vector() {
+        return new Vector(vector.data().clone());
+    }
     // Checks the supplied vector for validity and throws an exception if it is invalid.
-    private static void checkStateVector(
-            final Vector vector
-    ) {
+    private void checkStateVector() {
         Preconditions.checkState(
                 hasOneEntryPerState(vector),
                 "State vector must have one entry per health state"
@@ -109,6 +81,31 @@ public record StateVector(Vector vector) {
                 "State vector probabilities must sum to 1 within the sum tolerance"
         );
     }
+    /**
+     * Checks whether the supplied vector has one probability per health state,
+     * has no negative probabilities, and sums to {@code 1.0} within the sum tolerance.
+     *
+     * @param vector the vector to test
+     * @return whether the vector represents a valid distribution
+     * @throws NullStateVectorException if {@code vector} is {@code null}
+     * @throws IllegalStateException if the supplied vector's storage has been corrupted
+     */
+    public static boolean isDistribution(
+            final Vector vector
+    )
+            throws NullStateVectorException,
+            IllegalStateException
+    {
+        if (vector == null) {
+            throw new NullStateVectorException();
+        }
+
+        return (
+            hasOneEntryPerState(vector) &&
+            hasNoNegativeProbabilities(vector) &&
+            sumsToOne(vector)
+        );
+    }
     // Checks if the number of entries in the vector matches the number of health states.
     private static boolean hasOneEntryPerState(
             final Vector vector
@@ -119,14 +116,15 @@ public record StateVector(Vector vector) {
     private static boolean hasNoNegativeProbabilities(
             final Vector vector
     ) {
+        boolean hasNegative = true;
         for (int i = 0; i < STATES.length; i++) {
             if (vector.get(i) < 0.0) {
-                return false;
+                hasNegative = false;
             }
         }
-        return true;
+        return hasNegative;
     }
-    // Checks if the sum of probabilities in the vector is approximately equal to 1.0 within a specified tolerance.
+    // Checks if the sum of probabilities in the vector is approximately equal to 1.0.
     private static boolean sumsToOne(
             final Vector vector
     ) {
@@ -134,6 +132,7 @@ public record StateVector(Vector vector) {
         for (int i = 0; i < STATES.length; i++) {
             sum += vector.get(i);
         }
-        return Math.abs(sum - 1.0) <= SUM_TOLERANCE;
+        return (Math.abs(sum - 1.0) <= SUM_TOLERANCE);
     }
+
 }

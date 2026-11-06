@@ -72,7 +72,13 @@ public final class PredictionLogic {
     public PredictionResult predict(
             final Vector initial,
             final int steps
-    ) {
+    )
+            throws NullInitialDistributionException,
+            NegativePredictionStepsException,
+            IllegalStateException,
+            PredictionMatrixDimensionMismatchException,
+            UnstablePredictionDistributionException
+    {
         if (initial == null) {
             throw new NullInitialDistributionException();
         }
@@ -88,7 +94,6 @@ public final class PredictionLogic {
         final StateVector result = new StateVector(getWellDefined(computed));
         return new PredictionResult(steps, start, result, result.mostLikelyStates());
     }
-
     // A^n = P (D^n P^-1), where D^n raises each eigenvalue on the diagonal of D to the n-th power.
     private Matrix getTransitionPower(
             final int steps
@@ -100,8 +105,10 @@ public final class PredictionLogic {
             poweredData[i][i] = Math.pow(eigenvalues.get(i, i), steps);
         }
         try {
-            final Matrix scaledInverse = new MatrixLogic(new Matrix(poweredData)).multiply(diagonalization.inverseP());
+            final Matrix scaledInverse = new MatrixLogic(new Matrix(poweredData))
+                    .multiply(diagonalization.inverseP());
             return pLogic.multiply(scaledInverse);
+
         } catch (MatrixMultiplyDimMismatchException e) {
             throw new PredictionMatrixDimensionMismatchException();
         }
@@ -114,6 +121,7 @@ public final class PredictionLogic {
         if (StateVector.isDistribution(computed)) {
             return computed;
         }
+
         double smallest = Double.POSITIVE_INFINITY;
         double sum = 0;
         for (int i = 0; i < computed.length(); i++) {
@@ -123,6 +131,7 @@ public final class PredictionLogic {
         if (!(smallest >= -NEGATIVE_TOLERANCE && Math.abs(sum - 1) <= SUM_TOLERANCE)) {
             throw new UnstablePredictionDistributionException();
         }
+
         final double shift = Math.max(0, -smallest);
         final double shiftedSum = sum + shift * computed.length();
         final double[] entries = new double[computed.length()];
@@ -131,11 +140,20 @@ public final class PredictionLogic {
         }
         return new Vector(entries);
     }
-    // Checks that the diagonalization and matrix logic are initialized and have the right dimensions.
+    // Checks that the diagonalization and matrix logic are initialized and have the correct dimensions.
     private void checkPredictionLogic() {
-        Preconditions.checkState(diagonalization != null, "Diagonalization must be initialized");
-        Preconditions.checkState(diagonalization.P().rows() == HealthState.values().length, "The diagonalization must have one row and column per health state");
-        Preconditions.checkState(pLogic != null, "Matrix logic for P must be initialized");
+        Preconditions.checkState(
+                diagonalization != null,
+                "Diagonalization must be initialized"
+        );
+        Preconditions.checkState(
+                diagonalization.P().rows() == HealthState.values().length,
+                "The diagonalization must have one row and column per health state"
+        );
+        Preconditions.checkState(
+                pLogic != null,
+                "Matrix logic for P must be initialized"
+        );
     }
 
 }

@@ -1,4 +1,4 @@
-package storage;
+package io;
 
 import com.google.common.base.Preconditions;
 
@@ -29,7 +29,7 @@ final class PatientIdIndex {
      * @return the patient's group number, counted from 0 in the order of first appearance
      * @throws IllegalStateException if {@code patientId} is negative
      */
-    int add(
+    public int add(
             final int patientId
     ) {
         Preconditions.checkState(patientId >= 0, "Patient id must be non-negative");
@@ -50,7 +50,7 @@ final class PatientIdIndex {
      *
      * @return the number of groups
      */
-    int groups() {
+    public int groups() {
         return groups;
     }
     /**
@@ -60,7 +60,7 @@ final class PatientIdIndex {
      * @return the patient id
      * @throws IllegalStateException if {@code group} is out of range
      */
-    int patientId(
+    public int patientId(
             final int group
     ) {
         Preconditions.checkState(group >= 0 && group < groups, "Group out of bounds");
@@ -73,13 +73,12 @@ final class PatientIdIndex {
      * @return the row count
      * @throws IllegalStateException if {@code group} is out of range
      */
-    int rowCount(
+    public int rowCount(
             final int group
     ) {
         Preconditions.checkState(group >= 0 && group < groups, "Group out of bounds");
         return groupRowCounts[group];
     }
-
     // Registers a new patient in the given empty slot, growing the arrays when they fill up.
     private int addGroup(
             final int patientId,

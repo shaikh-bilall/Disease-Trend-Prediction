@@ -18,16 +18,16 @@ public enum HealthState {
     RECOVERED("recovered");
 
     // Every state by its label.
-    private static final Map<String, HealthState> BY_LABEL = Maps.uniqueIndex(Arrays.asList(values()), HealthState::label);
-
+    private static final Map<String, HealthState> BY_LABEL = Maps.uniqueIndex(
+            Arrays.asList(values()),
+            HealthState::label
+    );
     private final String label;
-
-    HealthState(
+    private HealthState(
             final String label
     ) {
         this.label = label;
     }
-
     /**
      * Returns the label of this state.
      *
@@ -46,7 +46,10 @@ public enum HealthState {
      */
     public static HealthState fromLabel(
             final String label
-    ) {
+    )
+            throws NullHealthStateLabelException,
+            UnknownHealthStateLabelException
+    {
         if (label == null) {
             throw new NullHealthStateLabelException();
         }

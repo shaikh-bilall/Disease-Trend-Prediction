@@ -1,4 +1,4 @@
-package storage;
+package io;
 
 import com.google.common.base.Preconditions;
 import domain.HealthState;
