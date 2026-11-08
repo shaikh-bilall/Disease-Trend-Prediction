@@ -1,5 +1,6 @@
 package diseaseTrendPrediction.io;
 
+import com.google.common.base.Preconditions;
 import diseaseTrendPrediction.domain.HealthState;
 import diseaseTrendPrediction.domain.StateVector;
 import domain.Vector;
@@ -23,7 +24,8 @@ public final class StateParser {
 
     /** Parses a textual description into a health-state distribution. */
     public static StateVector parse(
-            final String description
+            final String description,
+            final double epsilon
     )
             throws NullStateDescriptionException,
             EmptyStateDescriptionException,
@@ -35,6 +37,10 @@ public final class StateParser {
         if (description == null) {
             throw new NullStateDescriptionException();
         }
+        Preconditions.checkArgument(
+                Double.isFinite(epsilon) && epsilon >= 0,
+                "Epsilon must be finite and non-negative"
+        );
         if (description.isBlank()) {
             throw new EmptyStateDescriptionException();
         }
@@ -59,10 +65,10 @@ public final class StateParser {
         }
 
         final Vector vector = new Vector(fractions);
-        if (!StateVector.isDistribution(vector)) {
+        if (!StateVector.isDistribution(vector, epsilon)) {
             throw new InvalidPercentageSumException();
         }
-        return new StateVector(vector);
+        return new StateVector(vector, epsilon);
     }
 
 }

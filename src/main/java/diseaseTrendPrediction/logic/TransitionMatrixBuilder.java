@@ -14,13 +14,25 @@ import java.util.List;
  */
 public final class TransitionMatrixBuilder {
 
-    /** Builds a transition model from patient histories. */
+    /**
+     * Builds a transition model from patient histories.
+     *
+     * @param patientHistories observed patient histories
+     * @param epsilon tolerance for model validation
+     * @return estimated transition model
+     * @throws EmptyPatientHistoriesException if there are no patient histories
+     */
     public static MarkovModel build(
-            final List<PatientHistory> patientHistories
+            final List<PatientHistory> patientHistories,
+            final double epsilon
     )
             throws EmptyPatientHistoriesException
     {
         Preconditions.checkNotNull(patientHistories, "Patient histories must not be null");
+        Preconditions.checkArgument(
+                Double.isFinite(epsilon) && epsilon >= 0,
+                "Epsilon must be finite and non-negative"
+        );
         if (patientHistories.isEmpty()) {
             throw new EmptyPatientHistoriesException();
         }
@@ -28,7 +40,8 @@ public final class TransitionMatrixBuilder {
         return new MarkovModel(
                 new Matrix(
                         normalizeColumns(countTransitions(patientHistories))
-                )
+                ),
+                epsilon
         );
     }
     // Counts are indexed by destination state, then source state.

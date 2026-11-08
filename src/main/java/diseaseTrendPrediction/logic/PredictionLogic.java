@@ -19,25 +19,32 @@ import logic.MatrixLogic;
 /** Predicts future health-state distributions from a transition model. */
 public final class PredictionLogic {
 
-    // How far below zero an entry of a computed distribution may be and still count as rounding noise.
-    private static final double NEGATIVE_TOLERANCE = 1e-9;
-    // How far the sum of a computed distribution may be from 1 and still count as rounding noise.
-    private static final double SUM_TOLERANCE = 1e-6;
-
     private final Diagonalization diagonalization;
+    private final double epsilon;
     // Multiplies by P on the left; built once because building it row-reduces P.
     private final MatrixLogic pLogic;
 
-    /** Initializes prediction logic for a health-state transition model. */
+    /**
+     * Initializes prediction logic for a health-state transition model.
+     *
+     * @param diagonalization transition matrix diagonalization
+     * @param epsilon tolerance for distribution validation and numerical correction
+     */
     public PredictionLogic(
-            final Diagonalization diagonalization
+            final Diagonalization diagonalization,
+            final double epsilon
     ) {
         Preconditions.checkNotNull(diagonalization, "Diagonalization must not be null");
+        Preconditions.checkArgument(
+                Double.isFinite(epsilon) && epsilon >= 0,
+                "Epsilon must be finite and non-negative"
+        );
         if (diagonalization.P().rows() != HealthState.values().length) {
             throw new InvalidPredictionDiagonalizationSizeException();
         }
 
         this.diagonalization = diagonalization;
+        this.epsilon = epsilon;
         this.pLogic = new MatrixLogic(diagonalization.P());
         checkPredictionLogic();
     }
@@ -56,13 +63,13 @@ public final class PredictionLogic {
         if (steps < 0) {
             throw new NegativePredictionStepsException();
         }
-        final StateVector start = new StateVector(initial);
+        final StateVector start = new StateVector(initial, epsilon);
         if (steps == 0) {
             return new PredictionResult(0, start, start, start.mostLikelyStates());
         }
 
         final Vector computed = getTransitionPower(steps).multiply(start.vector());
-        final StateVector result = new StateVector(getWellDefined(computed));
+        final StateVector result = new StateVector(getWellDefined(computed), epsilon);
         return new PredictionResult(steps, start, result, result.mostLikelyStates());
     }
     // A^n = P (D^n P^-1), where D^n raises each eigenvalue on the diagonal of D to the n-th power.
@@ -84,12 +91,12 @@ public final class PredictionLogic {
             throw new PredictionMatrixDimensionMismatchException();
         }
     }
-    // Returns a valid distribution as-is. Within the rounding tolerances, shifts entries
-    // up if needed to remove negatives, then normalizes their sum to 1.
+    // Returns a valid distribution as-is. Within epsilon, shifts entries to remove negatives
+    // and normalizes their sum to 1.
     private Vector getWellDefined(
             final Vector computed
     ) {
-        if (StateVector.isDistribution(computed)) {
+        if (StateVector.isDistribution(computed, epsilon)) {
             return computed;
         }
 
@@ -99,7 +106,7 @@ public final class PredictionLogic {
             smallest = Math.min(smallest, computed.get(i));
             sum += computed.get(i);
         }
-        if (!(smallest >= -NEGATIVE_TOLERANCE && Math.abs(sum - 1) <= SUM_TOLERANCE)) {
+        if (!(smallest >= -epsilon && Math.abs(sum - 1) <= epsilon)) {
             throw new UnstablePredictionDistributionException();
         }
 

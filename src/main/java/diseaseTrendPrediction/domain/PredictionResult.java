@@ -23,6 +23,10 @@ public record PredictionResult(
         Preconditions.checkNotNull(initial, "Initial distribution must not be null");
         Preconditions.checkNotNull(result, "Result distribution must not be null");
         Preconditions.checkNotNull(mostLikelyStates, "Most likely states must not be null");
+        Preconditions.checkArgument(
+                initial.epsilon() == result.epsilon(),
+                "Initial and result distributions must use the same epsilon"
+        );
 
         this.steps = steps;
         this.initial = initial;
@@ -34,12 +38,12 @@ public record PredictionResult(
 
     @Override
     public StateVector initial() {
-        return new StateVector(initial.vector());
+        return new StateVector(initial.vector(), initial.epsilon());
     }
 
     @Override
     public StateVector result() {
-        return new StateVector(result.vector());
+        return new StateVector(result.vector(), result.epsilon());
     }
 
     @Override

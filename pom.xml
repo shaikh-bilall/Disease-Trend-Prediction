@@ -16,6 +16,11 @@
 
     <dependencies>
         <dependency>
+            <groupId>org.xerial</groupId>
+            <artifactId>sqlite-jdbc</artifactId>
+            <version>3.50.3.0</version>
+        </dependency>
+        <dependency>
             <groupId>github.shaikh-bilall</groupId>
             <artifactId>linear-algebra</artifactId>
             <version>1.0.0</version>

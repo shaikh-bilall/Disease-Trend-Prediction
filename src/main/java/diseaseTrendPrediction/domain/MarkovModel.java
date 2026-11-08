@@ -4,18 +4,26 @@ import com.google.common.base.Preconditions;
 import domain.Matrix;
 
 /** Represents transition probabilities between health states. */
-public record MarkovModel(Matrix model) {
+public record MarkovModel(Matrix model, double epsilon) {
 
-    // How far a column sum may be from 1 and still count as 1.
-    private static final double COLUMN_SUM_TOLERANCE = 1e-9;
-
-    /** Creates a Markov model from transition probabilities. */
+    /**
+     * Creates a Markov model from transition probabilities.
+     *
+     * @param model transition probabilities
+     * @param epsilon tolerance for column sum validation
+     */
     public MarkovModel(
-            final Matrix model
+            final Matrix model,
+            final double epsilon
     ) {
         Preconditions.checkNotNull(model, "Model must not be null");
+        Preconditions.checkArgument(
+                Double.isFinite(epsilon) && epsilon >= 0,
+                "Epsilon must be finite and non-negative"
+        );
 
         this.model = model.copy();
+        this.epsilon = epsilon;
         checkMarkovModel();
     }
 
@@ -49,7 +57,7 @@ public record MarkovModel(Matrix model) {
                 sum += entry;
             }
             Preconditions.checkState(
-                    Math.abs(sum - 1) <= COLUMN_SUM_TOLERANCE,
+                    Math.abs(sum - 1) <= epsilon,
                     "Column %s of the model must sum to 1", col
             );
         }

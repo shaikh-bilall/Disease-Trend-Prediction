@@ -1,4 +1,4 @@
-package diseaseTrendPrediction.io;
+package diseaseTrendPrediction.io.patientCSV;
 
 import com.google.common.base.Preconditions;
 

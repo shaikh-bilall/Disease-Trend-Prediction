@@ -2,40 +2,26 @@ package diseaseTrendPrediction.io;
 
 import com.google.common.base.Preconditions;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.attribute.FileTime;
+import java.time.Instant;
 
-/** Checks whether cached results remain current relative to their source. */
+/** Compares source and cached-data timestamps. */
 public final class CacheCheck {
 
-    /** Checks whether cached results are current for a source file. */
+    private CacheCheck() {}
+
+    /**
+     * Returns whether a cached snapshot was built from the same source version.
+     *
+     * @param sourceTimestamp current source timestamp
+     * @param snapshotTimestamp timestamp stored with the snapshot
+     * @return whether both timestamps identify the same source version
+     */
     public static boolean isUpToDate(
-            final Path source,
-            final Path... cachedFiles
-    )
-            throws IOException
-    {
-        Preconditions.checkNotNull(source, "Source must not be null");
-        Preconditions.checkNotNull(cachedFiles, "Cached files must not be null");
-        Preconditions.checkArgument(cachedFiles.length > 0, "At least one cached file is required");
-
-        final FileTime sourceTime = Files.getLastModifiedTime(source);
-        boolean allCachedFilesExistAndAreNew = true;
-        int i = 0;
-        while (allCachedFilesExistAndAreNew && i < cachedFiles.length) {
-            final Path cachedFile = cachedFiles[i];
-            Preconditions.checkNotNull(cachedFile, "Cached file must not be null");
-            if (
-                    !Files.isRegularFile(cachedFile) ||
-                    Files.getLastModifiedTime(cachedFile).compareTo(sourceTime) <= 0
-            ) {
-                allCachedFilesExistAndAreNew = false;
-            }
-            i++;
-        }
-        return allCachedFilesExistAndAreNew;
+            final Instant sourceTimestamp,
+            final Instant snapshotTimestamp
+    ) {
+        Preconditions.checkNotNull(sourceTimestamp, "Source timestamp must not be null");
+        Preconditions.checkNotNull(snapshotTimestamp, "Snapshot timestamp must not be null");
+        return snapshotTimestamp.equals(sourceTimestamp);
     }
-
 }
