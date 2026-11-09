@@ -13,25 +13,41 @@ public enum HealthState {
     INFECTED("infected"),
     RECOVERED("recovered");
 
-    // Every state by its label.
     private static final Map<String, HealthState> BY_LABEL = Maps.uniqueIndex(
             Arrays.asList(values()),
             HealthState::label
     );
     private final String label;
+    // Creates a health state with its display label.
     private HealthState(
             final String label
     ) {
         this.label = label;
     }
-    /** Returns the textual label for this health state. */
+    /**
+     * Returns the textual label for this health state.
+     *
+     * @return state label
+     */
     public String label() {
         return label;
     }
+    /**
+     * Returns the index used for this state in model data.
+     *
+     * @return state index
+     */
     public int stateIndex() {
         return ordinal();
     }
-    /** Finds the health state represented by a label. */
+    /**
+     * Finds the health state represented by a label.
+     *
+     * @param label state label
+     * @return matching health state
+     * @throws NullHealthStateLabelException if the label is null
+     * @throws UnknownHealthStateLabelException if the label is not recognized
+     */
     public static HealthState fromLabel(
             final String label
     )

@@ -28,9 +28,13 @@ public final class TransitionMatrixBuilder {
     )
             throws EmptyPatientHistoriesException
     {
-        Preconditions.checkNotNull(patientHistories, "Patient histories must not be null");
+        Preconditions.checkNotNull(
+                patientHistories,
+                "Patient histories must not be null"
+        );
         Preconditions.checkArgument(
-                Double.isFinite(epsilon) && epsilon >= 0,
+                Double.isFinite(epsilon) &&
+                epsilon >= 0,
                 "Epsilon must be finite and non-negative"
         );
         if (patientHistories.isEmpty()) {
@@ -44,7 +48,7 @@ public final class TransitionMatrixBuilder {
                 epsilon
         );
     }
-    // Counts are indexed by destination state, then source state.
+    // Counts observed transitions between health states.
     private static double[][] countTransitions(
             final List<PatientHistory> patientHistories
     ) {
@@ -52,7 +56,10 @@ public final class TransitionMatrixBuilder {
         final double[][] counts = new double[size][size];
 
         for (PatientHistory history : patientHistories) {
-            Preconditions.checkNotNull(history, "Patient history must not be null");
+            Preconditions.checkNotNull(
+                    history,
+                    "Patient history must not be null"
+            );
 
             final List<HealthState> states = history.stateHistory();
             if (states.size() == 1) {
@@ -66,7 +73,7 @@ public final class TransitionMatrixBuilder {
 
         return counts;
     }
-    // Produces a column-stochastic matrix of probabilities by normalizing the input matrix.
+    // Normalizes transition counts into column probabilities.
     private static double[][] normalizeColumns(
             final double[][] counts
     ) {

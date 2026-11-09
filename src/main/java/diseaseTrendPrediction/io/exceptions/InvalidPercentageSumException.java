@@ -1,5 +1,5 @@
 package diseaseTrendPrediction.io.exceptions;
 
-/** Signals that a state distribution description has an invalid total. */
+/** Signals that the percentages in a state description do not sum to one. */
 public final class InvalidPercentageSumException extends IllegalArgumentException {
 }

@@ -29,7 +29,10 @@ public final class MatrixStore {
     public MatrixStore(
             final Path databasePath
     ) {
-        Preconditions.checkNotNull(databasePath, "Database path must not be null");
+        Preconditions.checkNotNull(
+                databasePath,
+                "Database path must not be null"
+        );
         this.databasePath = databasePath;
         checkMatrixStore();
     }
@@ -41,18 +44,31 @@ public final class MatrixStore {
      * @param diagonalization transition matrix diagonalization
      * @param sourceTimestamp timestamp of the source data used to build the matrices
      * @throws TransitionDataPersistenceException if the snapshot cannot be committed
+     * @throws NullPointerException if a required argument is null
+     * @throws IllegalArgumentException if matrix dimensions do not match
      */
     public void saveTransitionData(
             final Matrix transition,
             final Diagonalization diagonalization,
             final Instant sourceTimestamp
     )
-            throws TransitionDataPersistenceException
+            throws TransitionDataPersistenceException,
+            NullPointerException,
+            IllegalArgumentException
     {
         checkMatrixStore();
-        Preconditions.checkNotNull(transition, "Transition matrix must not be null");
-        Preconditions.checkNotNull(diagonalization, "Diagonalization must not be null");
-        Preconditions.checkNotNull(sourceTimestamp, "Source timestamp must not be null");
+        Preconditions.checkNotNull(
+                transition,
+                "Transition matrix must not be null"
+        );
+        Preconditions.checkNotNull(
+                diagonalization,
+                "Diagonalization must not be null"
+        );
+        Preconditions.checkNotNull(
+                sourceTimestamp,
+                "Source timestamp must not be null"
+        );
 
         final Matrix p = diagonalization.P();
         final Matrix d = diagonalization.D();
@@ -68,7 +84,8 @@ public final class MatrixStore {
                 saveMatrix(connection, "d_matrix", d);
                 saveMatrix(connection, "inverse_p_matrix", inverseP);
                 try (PreparedStatement statement = connection.prepareStatement(
-                        "INSERT INTO transition_snapshot (state_count, source_timestamp) VALUES (?, ?)")) {
+                        "INSERT INTO transition_snapshot " +
+                        "(state_count, source_timestamp) VALUES (?, ?)")) {
                     statement.setInt(1, transition.rows());
                     statement.setString(2, sourceTimestamp.toString());
                     statement.executeUpdate();
@@ -91,10 +108,13 @@ public final class MatrixStore {
      *
      * @return persisted matrices and source timestamp
      * @throws TransitionDataNotFoundException if no snapshot exists
-     * @throws SQLException if the database cannot be read or the snapshot is incomplete
+     * @throws TransitionDataIntegrityException if the snapshot is incomplete or invalid
+     * @throws SQLException if a database operation fails
      */
     public TransitionData loadTransitionData()
-            throws SQLException
+            throws TransitionDataNotFoundException,
+            TransitionDataIntegrityException,
+            SQLException
     {
         try (Connection connection = Database.open(databasePath)) {
             connection.setAutoCommit(false);
@@ -102,7 +122,8 @@ public final class MatrixStore {
             final Instant timestamp;
             try (Statement statement = connection.createStatement();
                  ResultSet result = statement.executeQuery(
-                         "SELECT state_count, source_timestamp FROM transition_snapshot WHERE id = 1")) {
+                         "SELECT state_count, source_timestamp FROM transition_snapshot " +
+                         "WHERE id = 1")) {
                 if (!result.next()) {
                     throw new TransitionDataNotFoundException();
                 }
@@ -126,23 +147,33 @@ public final class MatrixStore {
         }
     }
 
+    // Checks that this store has a usable database path.
     private void checkMatrixStore() {
-        Preconditions.checkNotNull(databasePath, "Database path must not be null");
+        Preconditions.checkNotNull(
+                databasePath,
+                "Database path must not be null"
+        );
     }
 
+    // Checks that the snapshot matrices have one common square shape.
     private static void checkDimensions(
             final Matrix... matrices
     ) {
         final int size = matrices[0].rows();
-        Preconditions.checkArgument(size > 0, "Transition matrices must not be empty");
+        Preconditions.checkArgument(
+                size > 0,
+                "Transition matrices must not be empty"
+        );
         for (Matrix matrix : matrices) {
             Preconditions.checkArgument(
-                    matrix.rows() == size && matrix.cols() == size,
+                    matrix.rows() == size &&
+                    matrix.cols() == size,
                     "All transition matrices must be square and have equal dimensions"
             );
         }
     }
 
+    // Deletes the prior snapshot inside the active transaction.
     private static void clearSnapshot(
             final Connection connection
     )
@@ -157,6 +188,7 @@ public final class MatrixStore {
         }
     }
 
+    // Inserts every cell in one matrix table.
     private static void saveMatrix(
             final Connection connection,
             final String table,
@@ -178,6 +210,7 @@ public final class MatrixStore {
         }
     }
 
+    // Loads and validates one matrix from its cell table.
     private static Matrix loadMatrix(
             final Connection connection,
             final String table,
@@ -216,6 +249,7 @@ public final class MatrixStore {
         return new Matrix(entries);
     }
 
+    // Parses a persisted source timestamp.
     private static Instant parseSourceTimestamp(
             final String sourceTimestamp
     )

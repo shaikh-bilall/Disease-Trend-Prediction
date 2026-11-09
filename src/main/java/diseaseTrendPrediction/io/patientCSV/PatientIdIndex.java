@@ -7,22 +7,45 @@ import java.util.Arrays;
 /** Tracks patient identifiers and their observation counts. */
 final class PatientIdIndex {
 
-    // Table slots at the start: a power of two, with at most half of them in use.
     private static final int INITIAL_SLOTS = 1 << 16;
-    // Marks a table slot that holds no patient.
     private static final int EMPTY = -1;
 
-    private int[] slotIds = new int[INITIAL_SLOTS];
-    private int[] slotGroups = newEmptySlots(INITIAL_SLOTS);
-    private int[] groupIds = new int[INITIAL_SLOTS / 2];
-    private int[] groupRowCounts = new int[INITIAL_SLOTS / 2];
+    private int[] slotIds;
+    private int[] slotGroups;
+    private int[] groupIds;
+    private int[] groupRowCounts;
     private int groups;
 
-    /** Records an observation for a patient. */
+    /**
+     * Creates an empty patient index.
+     *
+     * @throws IllegalStateException if the index invariants are not satisfied
+     */
+    public PatientIdIndex() {
+        this.slotIds = new int[INITIAL_SLOTS];
+        this.slotGroups = newEmptySlots(INITIAL_SLOTS);
+        this.groupIds = new int[INITIAL_SLOTS / 2];
+        this.groupRowCounts = new int[INITIAL_SLOTS / 2];
+        this.groups = 0;
+        checkPatientIdIndex();
+    }
+
+    /**
+     * Records an observation for a patient.
+     *
+     * @param patientId patient identifier
+     * @return index of the patient's group
+     * @throws IllegalArgumentException if the identifier is negative
+     */
     public int add(
             final int patientId
-    ) {
-        Preconditions.checkArgument(patientId >= 0, "Patient id must be non-negative");
+    )
+            throws IllegalArgumentException
+    {
+        Preconditions.checkArgument(
+                patientId >= 0,
+                "Patient id must be non-negative"
+        );
         final int mask = slotIds.length - 1;
         int slot = hash(patientId) & mask;
         while (slotGroups[slot] != EMPTY && slotIds[slot] != patientId) {
@@ -33,27 +56,81 @@ final class PatientIdIndex {
             group = addGroup(patientId, slot);
         }
         groupRowCounts[group]++;
+        checkPatientIdIndex();
         return group;
     }
-    /** Returns the number of patients tracked. */
+    /**
+     * Returns the number of patients tracked.
+     *
+     * @return number of tracked patients
+     */
     public int groups() {
         return groups;
     }
-    /** Returns a patient identifier. */
+    /**
+     * Returns a patient identifier.
+     *
+     * @param group patient group index
+     * @return patient identifier
+     * @throws IndexOutOfBoundsException if group is outside the tracked range
+     */
     public int patientId(
             final int group
-    ) {
-        Preconditions.checkElementIndex(group, groups, "Group");
+    )
+            throws IndexOutOfBoundsException
+    {
+        Preconditions.checkElementIndex(
+                group,
+                groups,
+                "Group"
+        );
         return groupIds[group];
     }
-    /** Returns the number of observations for a patient. */
+    /**
+     * Returns the number of observations for a patient.
+     *
+     * @param group patient group index
+     * @return number of observations
+     * @throws IndexOutOfBoundsException if group is outside the tracked range
+     */
     public int rowCount(
             final int group
-    ) {
-        Preconditions.checkElementIndex(group, groups, "Group");
+    )
+            throws IndexOutOfBoundsException
+    {
+        Preconditions.checkElementIndex(
+                group,
+                groups,
+                "Group"
+        );
         return groupRowCounts[group];
     }
-    // Registers a new patient in the given empty slot, growing the arrays when they fill up.
+    // Checks the index's internal array and capacity invariants.
+    private void checkPatientIdIndex() {
+        Preconditions.checkState(
+                slotIds.length == slotGroups.length,
+                "Patient id and group tables must have equal lengths"
+        );
+        Preconditions.checkState(
+                slotIds.length > 0 &&
+                (slotIds.length & (slotIds.length - 1)) == 0,
+                "Patient table size must be a positive power of two"
+        );
+        Preconditions.checkState(
+                groups >= 0 &&
+                groups <= groupIds.length,
+                "Patient group count must fit its id table"
+        );
+        Preconditions.checkState(
+                groups <= groupRowCounts.length,
+                "Patient group count must fit its row-count table"
+        );
+        Preconditions.checkState(
+                groups * 2 <= slotIds.length,
+                "Patient table must remain at most half full"
+        );
+    }
+    // Registers a new patient in the index.
     private int addGroup(
             final int patientId,
             final int slot
@@ -69,9 +146,10 @@ final class PatientIdIndex {
         if (groups * 2 > slotIds.length) {
             rehash();
         }
+        checkPatientIdIndex();
         return group;
     }
-    // Doubles the table and puts every patient back in.
+    // Resizes the lookup table.
     private void rehash() {
         final int slots = slotIds.length * 2;
         final int mask = slots - 1;
@@ -87,15 +165,16 @@ final class PatientIdIndex {
         }
         slotIds = newSlotIds;
         slotGroups = newSlotGroups;
+        checkPatientIdIndex();
     }
-    // Spreads the bits of the id so that neighboring ids do not cluster in the table.
+    // Hashes a patient identifier.
     private static int hash(
             final int patientId
     ) {
         final int h = patientId * 0x9E3779B9;
         return h ^ (h >>> 16);
     }
-    // Returns a group array of the given size with every slot empty.
+    // Creates a lookup table with every slot empty.
     private static int[] newEmptySlots(
             final int slots
     ) {

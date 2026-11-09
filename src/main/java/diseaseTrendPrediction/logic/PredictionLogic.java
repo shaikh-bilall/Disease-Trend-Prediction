@@ -21,7 +21,7 @@ public final class PredictionLogic {
 
     private final Diagonalization diagonalization;
     private final double epsilon;
-    // Multiplies by P on the left; built once because building it row-reduces P.
+    // Holds matrix logic for the diagonalization basis.
     private final MatrixLogic pLogic;
 
     /**
@@ -34,9 +34,13 @@ public final class PredictionLogic {
             final Diagonalization diagonalization,
             final double epsilon
     ) {
-        Preconditions.checkNotNull(diagonalization, "Diagonalization must not be null");
+        Preconditions.checkNotNull(
+                diagonalization,
+                "Diagonalization must not be null"
+        );
         Preconditions.checkArgument(
-                Double.isFinite(epsilon) && epsilon >= 0,
+                Double.isFinite(epsilon) &&
+                epsilon >= 0,
                 "Epsilon must be finite and non-negative"
         );
         if (diagonalization.P().rows() != HealthState.values().length) {
@@ -49,7 +53,17 @@ public final class PredictionLogic {
         checkPredictionLogic();
     }
 
-    /** Predicts a health-state distribution after a number of steps. */
+    /**
+     * Predicts a health-state distribution after a number of steps.
+     *
+     * @param initial starting distribution
+     * @param steps number of transitions to apply
+     * @return prediction result
+     * @throws NegativePredictionStepsException if steps is negative
+     * @throws IllegalStateException if the initial distribution is invalid
+     * @throws PredictionMatrixDimensionMismatchException if matrices cannot be multiplied
+     * @throws UnstablePredictionDistributionException if numerical correction exceeds epsilon
+     */
     public PredictionResult predict(
             final Vector initial,
             final int steps
@@ -59,7 +73,10 @@ public final class PredictionLogic {
             PredictionMatrixDimensionMismatchException,
             UnstablePredictionDistributionException
     {
-        Preconditions.checkNotNull(initial, "Initial distribution must not be null");
+        Preconditions.checkNotNull(
+                initial,
+                "Initial distribution must not be null"
+        );
         if (steps < 0) {
             throw new NegativePredictionStepsException();
         }
@@ -72,7 +89,7 @@ public final class PredictionLogic {
         final StateVector result = new StateVector(getWellDefined(computed), epsilon);
         return new PredictionResult(steps, start, result, result.mostLikelyStates());
     }
-    // A^n = P (D^n P^-1), where D^n raises each eigenvalue on the diagonal of D to the n-th power.
+    // Computes a transition matrix power for the requested number of steps.
     private Matrix getTransitionPower(
             final int steps
     ) {
@@ -91,8 +108,7 @@ public final class PredictionLogic {
             throw new PredictionMatrixDimensionMismatchException();
         }
     }
-    // Returns a valid distribution as-is. Within epsilon, shifts entries to remove negatives
-    // and normalizes their sum to 1.
+    // Validates and corrects a computed probability distribution.
     private Vector getWellDefined(
             final Vector computed
     ) {
@@ -118,7 +134,7 @@ public final class PredictionLogic {
         }
         return new Vector(entries);
     }
-    // Checks that the diagonalization and matrix logic are initialized and have the correct dimensions.
+    // Checks that the prediction logic has valid dependencies.
     private void checkPredictionLogic() {
         Preconditions.checkState(
                 diagonalization != null,

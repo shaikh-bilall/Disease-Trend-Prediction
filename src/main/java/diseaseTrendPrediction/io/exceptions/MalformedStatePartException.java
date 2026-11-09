@@ -1,5 +1,5 @@
 package diseaseTrendPrediction.io.exceptions;
 
-/** Signals that a state distribution description is invalid. */
+/** Signals that a part of a state description is malformed. */
 public final class MalformedStatePartException extends IllegalArgumentException {
 }

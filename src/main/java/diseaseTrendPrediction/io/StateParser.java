@@ -19,10 +19,22 @@ import java.util.regex.Pattern;
 public final class StateParser {
 
     private static final String PART_SEPARATOR = ",";
-    // A plain number (digits, with an optional dot and more digits), a percent sign and a state name.
     private static final Pattern PART = Pattern.compile("(\\d+(?:\\.\\d+)?)\\s*%\\s*(\\S+)");
 
-    /** Parses a textual description into a health-state distribution. */
+    /**
+     * Parses a textual description into a health-state distribution.
+     *
+     * @param description distribution description
+     * @param epsilon tolerance for validating the percentage sum
+     * @return parsed state vector
+     * @throws NullStateDescriptionException if description is null
+     * @throws EmptyStateDescriptionException if description is blank
+     * @throws MalformedStatePartException if a part is malformed
+     * @throws UnknownHealthStateLabelException if a state label is unknown
+     * @throws DuplicateStateException if a state is listed more than once
+     * @throws InvalidPercentageSumException if percentages do not sum to one
+     * @throws IllegalArgumentException if epsilon is invalid
+     */
     public static StateVector parse(
             final String description,
             final double epsilon
@@ -32,13 +44,15 @@ public final class StateParser {
             MalformedStatePartException,
             UnknownHealthStateLabelException,
             DuplicateStateException,
-            InvalidPercentageSumException
+            InvalidPercentageSumException,
+            IllegalArgumentException
     {
         if (description == null) {
             throw new NullStateDescriptionException();
         }
         Preconditions.checkArgument(
-                Double.isFinite(epsilon) && epsilon >= 0,
+                Double.isFinite(epsilon) &&
+                epsilon >= 0,
                 "Epsilon must be finite and non-negative"
         );
         if (description.isBlank()) {
@@ -56,7 +70,9 @@ public final class StateParser {
             if (!Double.isFinite(percentage)) {
                 throw new MalformedStatePartException();
             }
-            final HealthState state = HealthState.fromLabel(matcher.group(2).toLowerCase(Locale.ROOT));
+            final HealthState state = HealthState.fromLabel(
+                    matcher.group(2).toLowerCase(Locale.ROOT)
+            );
             if (given[state.stateIndex()]) {
                 throw new DuplicateStateException();
             }

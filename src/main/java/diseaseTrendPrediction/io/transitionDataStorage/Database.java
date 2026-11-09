@@ -17,6 +17,7 @@ public final class Database {
 
     private static final int SCHEMA_VERSION = 1;
 
+    // Prevents instances of this stateless utility.
     private Database() {}
 
     /**
@@ -24,15 +25,22 @@ public final class Database {
      *
      * @param databasePath SQLite database file
      * @throws SQLException if the database cannot be initialized
+     * @throws UnsupportedDatabaseSchemaException if the database schema is newer
      * @throws IOException if the database directory cannot be created
+     * @throws NullPointerException if databasePath is null
      */
     public static void initialize(
             final Path databasePath
     )
             throws SQLException,
-            IOException
+            UnsupportedDatabaseSchemaException,
+            IOException,
+            NullPointerException
     {
-        Preconditions.checkNotNull(databasePath, "Database path must not be null");
+        Preconditions.checkNotNull(
+                databasePath,
+                "Database path must not be null"
+        );
         final Path parent = databasePath.toAbsolutePath().getParent();
         if (parent != null) {
             Files.createDirectories(parent);
@@ -72,16 +80,22 @@ public final class Database {
      * @param databasePath SQLite database file
      * @return an open database connection
      * @throws SQLException if a connection cannot be opened
+     * @throws NullPointerException if databasePath is null
      */
     public static Connection open(
             final Path databasePath
     )
-            throws SQLException
+            throws SQLException,
+            NullPointerException
     {
-        Preconditions.checkNotNull(databasePath, "Database path must not be null");
+        Preconditions.checkNotNull(
+                databasePath,
+                "Database path must not be null"
+        );
         return DriverManager.getConnection("jdbc:sqlite:" + databasePath.toAbsolutePath());
     }
 
+    // Creates one matrix cell table when it is absent.
     private static void createMatrixTable(
             final Statement statement,
             final String table
@@ -89,10 +103,12 @@ public final class Database {
             throws SQLException
     {
         statement.execute("CREATE TABLE IF NOT EXISTS " + table + " " +
-                "(row_index INTEGER NOT NULL, column_index INTEGER NOT NULL, value REAL NOT NULL, " +
+                "(row_index INTEGER NOT NULL, column_index INTEGER NOT NULL, " +
+                "value REAL NOT NULL, " +
                 "PRIMARY KEY (row_index, column_index))");
     }
 
+    // Inserts default epsilon profiles without replacing existing values.
     private static void seedEpsilonProfiles(
             final Connection connection
     )

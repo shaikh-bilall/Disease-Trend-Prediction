@@ -21,27 +21,89 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-/** Reads patient observations from CSV data. */
+/** Reads patient observations from CSV files. */
 public final class PatientCsvReader {
 
     private static final String HEADER = "patient-id,time-step,state";
-    // Characters buffered per read of the file.
     private static final int BUFFER_SIZE = 1 << 16;
-    // Rows the arrays hold at the start; they double when full.
     private static final int INITIAL_ROWS = 1 << 16;
-    // Marks a place in the placed array that no row has filled yet.
     private static final byte NOT_PLACED = -1;
 
-    // The rows as parallel arrays: the patient's group, the time step and the state index of each row.
-    private record Rows(int[] groups, int[] steps, byte[] states, int size) {}
+    private record Rows(
+            int[] groups,
+            int[] steps,
+            byte[] states,
+            int size
+    ) {
 
-    /** Reads patient histories from a CSV file. */
+        // Creates a row collection with validated component values.
+        private Rows(
+                final int[] groups,
+                final int[] steps,
+                final byte[] states,
+                final int size
+        ) {
+            this.groups = groups;
+            this.steps = steps;
+            this.states = states;
+            this.size = size;
+            checkRows();
+        }
+
+        // Checks that the row arrays can represent the declared row count.
+        private void checkRows() {
+            Preconditions.checkNotNull(
+                    groups,
+                    "Row groups must not be null"
+            );
+            Preconditions.checkNotNull(
+                    steps,
+                    "Row steps must not be null"
+            );
+            Preconditions.checkNotNull(
+                    states,
+                    "Row states must not be null"
+            );
+            Preconditions.checkState(
+                    size >= 0 &&
+                    size <= groups.length &&
+                    size <= steps.length &&
+                    size <= states.length,
+                    "Row count must fit every row array"
+            );
+        }
+    }
+
+    /**
+     * Reads patient histories from a CSV file.
+     *
+     * @param csvPath source CSV path
+     * @return histories read from the CSV
+     * @throws IOException if the CSV cannot be read
+     * @throws InvalidPatientCsvHeaderException if the header is invalid
+     * @throws MalformedPatientCsvRowException if a row is malformed
+     * @throws InvalidPatientIdException if a patient identifier is invalid
+     * @throws InvalidPatientTimeStepException if a time step is invalid
+     * @throws InvalidPatientCsvStateException if a state label is unknown
+     * @throws InvalidPatientTimeSequenceException if patient time steps are invalid
+     * @throws NullPointerException if csvPath is null
+     */
     public static List<PatientHistory> read(
             final Path csvPath
     )
-            throws IOException
+            throws IOException,
+            InvalidPatientCsvHeaderException,
+            MalformedPatientCsvRowException,
+            InvalidPatientIdException,
+            InvalidPatientTimeStepException,
+            InvalidPatientCsvStateException,
+            InvalidPatientTimeSequenceException,
+            NullPointerException
     {
-        Preconditions.checkNotNull(csvPath, "CSV path must not be null");
+        Preconditions.checkNotNull(
+                csvPath,
+                "CSV path must not be null"
+        );
 
         final PatientIdIndex index = new PatientIdIndex();
         final Rows rows = readRows(csvPath, index);
@@ -50,7 +112,7 @@ public final class PatientCsvReader {
         return getHistories(index, offsets, placed);
     }
 
-    // Parses every row into the arrays, numbering each patient's group as it first appears.
+    // Reads and validates patient observation rows.
     private static Rows readRows(
             final Path csvPath,
             final PatientIdIndex index
@@ -62,16 +124,18 @@ public final class PatientCsvReader {
         byte[] rowStates = new byte[INITIAL_ROWS];
         int size = 0;
 
-        try (BufferedReader reader = new BufferedReader(
-                new InputStreamReader(Files.newInputStream(csvPath), StandardCharsets.UTF_8), BUFFER_SIZE)) {
+        try (
+            BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(Files.newInputStream(csvPath), StandardCharsets.UTF_8),
+                    BUFFER_SIZE
+            )
+        ) {
             String line = reader.readLine();
             if (!HEADER.equals(line)) {
                 throw new InvalidPatientCsvHeaderException();
             }
 
-            int lineNumber = 1;
             while ((line = reader.readLine()) != null) {
-                lineNumber++;
                 final int firstComma = line.indexOf(',');
                 final int secondComma = (firstComma < 0) ? -1 : line.indexOf(',', firstComma + 1);
                 if (secondComma < 0 || line.indexOf(',', secondComma + 1) >= 0) {
@@ -86,7 +150,7 @@ public final class PatientCsvReader {
                 if (timeStep < 0) {
                     throw new InvalidPatientTimeStepException();
                 }
-                final HealthState state = parseState(line, secondComma + 1, lineNumber);
+                final HealthState state = parseState(line, secondComma + 1);
 
                 if (size == rowGroups.length) {
                     rowGroups = Arrays.copyOf(rowGroups, size * 2);
@@ -101,7 +165,7 @@ public final class PatientCsvReader {
         }
         return new Rows(rowGroups, rowSteps, rowStates, size);
     }
-    // The non-negative integer in line[from, to), or -1 if the range is empty, has a non-digit, or is too large.
+    // Parses a non-negative integer from a row segment.
     private static int parseNonNegativeInt(
             final String line,
             final int from,
@@ -123,24 +187,18 @@ public final class PatientCsvReader {
         }
         return (int) value;
     }
-    // The state whose label is the rest of the line from the given position, with the line number added to an error.
+    // Parses the health-state label in a row.
     private static HealthState parseState(
             final String line,
-            final int from,
-            final int lineNumber
+            final int from
     ) {
         try {
             return HealthState.fromLabel(line.substring(from));
         } catch (UnknownHealthStateLabelException e) {
-            final InvalidPatientCsvStateException exception = new InvalidPatientCsvStateException();
-            exception.initCause(new IllegalArgumentException(
-                    "Line " + lineNumber + ": unknown health state '" + line.substring(from) + "'",
-                    e
-            ));
-            throw exception;
+            throw new InvalidPatientCsvStateException();
         }
     }
-    // Where each patient's block starts in the placed array: offsets[g] to offsets[g + 1] belongs to group g.
+    // Builds patient history offsets from observation counts.
     private static int[] getOffsets(
             final PatientIdIndex index
     ) {
@@ -150,7 +208,7 @@ public final class PatientCsvReader {
         }
         return offsets;
     }
-    // Puts every state at its time step within its patient's block, which sorts the block and exposes any gap or repeat.
+    // Places each observation at its patient's time-step index.
     private static byte[] placeStates(
             final Rows rows,
             final PatientIdIndex index,
@@ -166,7 +224,8 @@ public final class PatientCsvReader {
             final int group = rowGroups[row];
             final int start = offsets[group];
             final int step = rowSteps[row];
-            final boolean fits = step < offsets[group + 1] - start && placed[start + step] == NOT_PLACED;
+            final boolean fits = step < (offsets[group + 1] - start) &&
+                                 placed[start + step] == NOT_PLACED;
             if (!fits) {
                 throw new InvalidPatientTimeSequenceException();
             }
@@ -174,7 +233,7 @@ public final class PatientCsvReader {
         }
         return placed;
     }
-    // Builds the histories in ascending order of patient id.
+    // Builds patient histories ordered by patient identifier.
     private static List<PatientHistory> getHistories(
             final PatientIdIndex index,
             final int[] offsets,

@@ -3,22 +3,37 @@ package diseaseTrendPrediction.domain;
 import com.google.common.base.Preconditions;
 import domain.Matrix;
 
-/** Represents transition probabilities between health states. */
-public record MarkovModel(Matrix model, double epsilon) {
+/**
+ * Represents transition probabilities between health states.
+ *
+ * @param model transition matrix
+ * @param epsilon tolerance used to validate transition probabilities
+ */
+public record MarkovModel(
+        Matrix model,
+        double epsilon
+) {
 
     /**
      * Creates a Markov model from transition probabilities.
      *
      * @param model transition probabilities
      * @param epsilon tolerance for column sum validation
+     * @throws NullPointerException if model is null
+     * @throws IllegalArgumentException if epsilon is invalid
+     * @throws IllegalStateException if the matrix is not a valid transition model
      */
     public MarkovModel(
             final Matrix model,
             final double epsilon
     ) {
-        Preconditions.checkNotNull(model, "Model must not be null");
+        Preconditions.checkNotNull(
+                model,
+                "Model must not be null"
+        );
         Preconditions.checkArgument(
-                Double.isFinite(epsilon) && epsilon >= 0,
+                Double.isFinite(epsilon) &&
+                epsilon >= 0,
                 "Epsilon must be finite and non-negative"
         );
 
@@ -27,12 +42,17 @@ public record MarkovModel(Matrix model, double epsilon) {
         checkMarkovModel();
     }
 
+    /**
+     * Returns a copy of the transition matrix.
+     *
+     * @return transition matrix copy
+     */
     @Override
     public Matrix model() {
         return new Matrix(model.data());
     }
 
-    // Checks that the model has one row and column per health state, and a column-stochastic matrix.
+    // Checks that the model satisfies its invariants.
     private void checkMarkovModel() {
         Preconditions.checkNotNull(
                 model,
@@ -58,7 +78,8 @@ public record MarkovModel(Matrix model, double epsilon) {
             }
             Preconditions.checkState(
                     Math.abs(sum - 1) <= epsilon,
-                    "Column %s of the model must sum to 1", col
+                    "Column %s of the model must sum to 1",
+                    col
             );
         }
     }

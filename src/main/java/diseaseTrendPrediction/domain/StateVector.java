@@ -6,8 +6,16 @@ import domain.Vector;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Represents a probability distribution over health states. */
-public record StateVector(Vector vector, double epsilon) {
+/**
+ * Represents a probability distribution over health states.
+ *
+ * @param vector probability values
+ * @param epsilon tolerance used for validation and ties
+ */
+public record StateVector(
+        Vector vector,
+        double epsilon
+) {
 
     private static final HealthState[] STATES = HealthState.values();
 
@@ -16,11 +24,21 @@ public record StateVector(Vector vector, double epsilon) {
      *
      * @param vector probability values
      * @param epsilon tolerance for validation and ties
+     * @throws NullPointerException if vector is null
+     * @throws IllegalArgumentException if epsilon is invalid
+     * @throws IllegalStateException if vector is not a valid distribution
      */
-    public StateVector(final Vector vector, final double epsilon) {
-        Preconditions.checkNotNull(vector, "State vector must not be null");
+    public StateVector(
+            final Vector vector,
+            final double epsilon
+    ) {
+        Preconditions.checkNotNull(
+                vector,
+                "State vector must not be null"
+        );
         Preconditions.checkArgument(
-                Double.isFinite(epsilon) && epsilon >= 0,
+                Double.isFinite(epsilon) &&
+                epsilon >= 0,
                 "Epsilon must be finite and non-negative"
         );
         this.vector = new Vector(vector.data());
@@ -49,15 +67,22 @@ public record StateVector(Vector vector, double epsilon) {
         return new Vector(vector.data());
     }
 
+    // Checks that this state vector is valid.
     private void checkStateVector() {
-        Preconditions.checkState(vector.length() == STATES.length,
-                "State vector must have one entry per health state");
+        Preconditions.checkState(
+                vector.length() == STATES.length,
+                "State vector must have one entry per health state"
+        );
         for (int i = 0; i < STATES.length; i++) {
-            Preconditions.checkState(vector.get(i) >= 0.0,
-                    "State vector must not have negative probabilities");
+            Preconditions.checkState(
+                    vector.get(i) >= 0.0,
+                    "State vector must not have negative probabilities"
+            );
         }
-        Preconditions.checkState(sumsToOne(vector, epsilon),
-                "State vector probabilities must sum to 1 within the sum tolerance");
+        Preconditions.checkState(
+                sumsToOne(vector, epsilon),
+                "State vector probabilities must sum to 1 within the sum tolerance"
+        );
     }
 
     /**
@@ -66,11 +91,23 @@ public record StateVector(Vector vector, double epsilon) {
      * @param vector probability values
      * @param epsilon tolerance for the sum
      * @return whether the values form a distribution
+     * @throws NullPointerException if the vector is null
+     * @throws IllegalArgumentException if epsilon is invalid
      */
-    public static boolean isDistribution(final Vector vector, final double epsilon) {
-        Preconditions.checkNotNull(vector, "State vector must not be null");
+    public static boolean isDistribution(
+            final Vector vector,
+            final double epsilon
+    )
+            throws NullPointerException,
+            IllegalArgumentException
+    {
+        Preconditions.checkNotNull(
+                vector,
+                "State vector must not be null"
+        );
         Preconditions.checkArgument(
-                Double.isFinite(epsilon) && epsilon >= 0,
+                Double.isFinite(epsilon) &&
+                epsilon >= 0,
                 "Epsilon must be finite and non-negative"
         );
         if (vector.length() != STATES.length) {
@@ -84,7 +121,11 @@ public record StateVector(Vector vector, double epsilon) {
         return sumsToOne(vector, epsilon);
     }
 
-    private static boolean sumsToOne(final Vector vector, final double epsilon) {
+    // Checks whether the probabilities sum to one within epsilon.
+    private static boolean sumsToOne(
+            final Vector vector,
+            final double epsilon
+    ) {
         double sum = 0.0;
         for (int i = 0; i < STATES.length; i++) {
             sum += vector.get(i);
