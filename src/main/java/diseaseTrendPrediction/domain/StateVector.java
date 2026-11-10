@@ -1,7 +1,7 @@
 package diseaseTrendPrediction.domain;
 
 import com.google.common.base.Preconditions;
-import domain.Vector;
+import linearAlgebra.domain.Vector;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,30 +24,32 @@ public record StateVector(
      *
      * @param vector probability values
      * @param epsilon tolerance for validation and ties
-     * @throws NullPointerException if vector is null
-     * @throws IllegalArgumentException if epsilon is invalid
-     * @throws IllegalStateException if vector is not a valid distribution
      */
     public StateVector(
             final Vector vector,
             final double epsilon
     ) {
         Preconditions.checkNotNull(
-                vector,
-                "State vector must not be null"
+            vector,
+            "State vector must not be null"
         );
         Preconditions.checkArgument(
-                Double.isFinite(epsilon) &&
-                epsilon >= 0,
-                "Epsilon must be finite and non-negative"
+            Double.isFinite(epsilon) &&
+            epsilon >= 0,
+            "Epsilon must be finite and non-negative"
         );
         this.vector = new Vector(vector.data());
         this.epsilon = epsilon;
         checkStateVector();
     }
 
-    /** Returns the health states most likely in this distribution. */
+    /**
+     * Returns the health states most likely in this distribution.
+     *
+     * @return immutable list of tied most likely states
+     */
     public List<HealthState> mostLikelyStates() {
+        checkStateVector();
         double highest = 0.0;
         for (int i = 0; i < STATES.length; i++) {
             highest = Math.max(highest, vector.get(i));
@@ -61,27 +63,43 @@ public record StateVector(
         return List.copyOf(tied);
     }
 
-    /** Returns the probability values in this distribution. */
+    /**
+     * Returns the probability values in this distribution.
+     *
+     * @return copy of the probability vector
+     */
     @Override
     public Vector vector() {
+        checkStateVector();
         return new Vector(vector.data());
+    }
+
+    /**
+     * Returns the tolerance used to validate this distribution.
+     *
+     * @return distribution validation tolerance
+     */
+    @Override
+    public double epsilon() {
+        checkStateVector();
+        return epsilon;
     }
 
     // Checks that this state vector is valid.
     private void checkStateVector() {
         Preconditions.checkState(
-                vector.length() == STATES.length,
-                "State vector must have one entry per health state"
+            vector.length() == STATES.length,
+            "State vector must have one entry per health state"
         );
         for (int i = 0; i < STATES.length; i++) {
             Preconditions.checkState(
-                    vector.get(i) >= 0.0,
-                    "State vector must not have negative probabilities"
+                vector.get(i) >= 0.0,
+                "State vector must not have negative probabilities"
             );
         }
         Preconditions.checkState(
-                sumsToOne(vector, epsilon),
-                "State vector probabilities must sum to 1 within the sum tolerance"
+            sumsToOne(vector, epsilon),
+            "State vector probabilities must sum to 1 within the sum tolerance"
         );
     }
 
@@ -91,24 +109,20 @@ public record StateVector(
      * @param vector probability values
      * @param epsilon tolerance for the sum
      * @return whether the values form a distribution
-     * @throws NullPointerException if the vector is null
-     * @throws IllegalArgumentException if epsilon is invalid
      */
     public static boolean isDistribution(
             final Vector vector,
             final double epsilon
     )
-            throws NullPointerException,
-            IllegalArgumentException
     {
         Preconditions.checkNotNull(
-                vector,
-                "State vector must not be null"
+            vector,
+            "State vector must not be null"
         );
         Preconditions.checkArgument(
-                Double.isFinite(epsilon) &&
-                epsilon >= 0,
-                "Epsilon must be finite and non-negative"
+            Double.isFinite(epsilon) &&
+            epsilon >= 0,
+            "Epsilon must be finite and non-negative"
         );
         if (vector.length() != STATES.length) {
             return false;

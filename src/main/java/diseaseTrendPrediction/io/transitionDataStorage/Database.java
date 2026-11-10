@@ -1,11 +1,14 @@
 package diseaseTrendPrediction.io.transitionDataStorage;
 
 import com.google.common.base.Preconditions;
+import diseaseTrendPrediction.io.exceptions.DatabaseConnectionException;
+import diseaseTrendPrediction.io.exceptions.DatabaseDirectoryCreationException;
+import diseaseTrendPrediction.io.exceptions.DatabaseInitializationException;
 import diseaseTrendPrediction.io.exceptions.UnsupportedDatabaseSchemaException;
 
-import java.nio.file.Path;
-import java.nio.file.Files;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -24,53 +27,86 @@ public final class Database {
      * Creates the schema and default epsilon profiles when absent.
      *
      * @param databasePath SQLite database file
-     * @throws SQLException if the database cannot be initialized
+     * @throws DatabaseInitializationException if the database cannot be initialized
      * @throws UnsupportedDatabaseSchemaException if the database schema is newer
-     * @throws IOException if the database directory cannot be created
-     * @throws NullPointerException if databasePath is null
+     * @throws DatabaseDirectoryCreationException if the database directory cannot be created
      */
     public static void initialize(
             final Path databasePath
     )
-            throws SQLException,
+            throws DatabaseInitializationException,
             UnsupportedDatabaseSchemaException,
-            IOException,
-            NullPointerException
+            DatabaseDirectoryCreationException
     {
         Preconditions.checkNotNull(
-                databasePath,
-                "Database path must not be null"
+            databasePath,
+            "Database path must not be null"
         );
+
         final Path parent = databasePath.toAbsolutePath().getParent();
         if (parent != null) {
-            Files.createDirectories(parent);
+            try {
+                Files.createDirectories(parent);
+            } catch (IOException e) {
+                throw new DatabaseDirectoryCreationException();
+            }
         }
-        try (Connection connection = open(databasePath)) {
+        try (
+            Connection connection = open(databasePath)
+        ) {
             connection.setAutoCommit(false);
-            try (Statement statement = connection.createStatement()) {
+            try (
+                Statement statement = connection.createStatement()
+            ) {
                 int version;
-                try (var result = statement.executeQuery("PRAGMA user_version")) {
+                try (
+                    var result = statement.executeQuery(
+                        "PRAGMA user_version"
+                    )
+                ) {
                     version = result.next() ? result.getInt(1) : 0;
                 }
                 if (version > SCHEMA_VERSION) {
                     throw new UnsupportedDatabaseSchemaException();
                 }
-                statement.execute("CREATE TABLE IF NOT EXISTS transition_snapshot " +
-                        "(id INTEGER PRIMARY KEY CHECK (id = 1), state_count INTEGER NOT NULL, " +
-                        "source_timestamp TEXT NOT NULL)");
+                statement.execute(
+                    "CREATE TABLE IF NOT EXISTS transition_snapshot(" +
+                            "id INTEGER PRIMARY KEY CHECK (id = 1)," +
+                            "state_count INTEGER NOT NULL," +
+                            "source_timestamp TEXT NOT NULL" +
+                        ")"
+                );
                 createMatrixTable(statement, "transition_matrix");
                 createMatrixTable(statement, "p_matrix");
                 createMatrixTable(statement, "d_matrix");
                 createMatrixTable(statement, "inverse_p_matrix");
-                statement.execute("CREATE TABLE IF NOT EXISTS epsilon_profile " +
-                        "(name TEXT PRIMARY KEY, value REAL NOT NULL)");
+                statement.execute(
+                    "CREATE TABLE IF NOT EXISTS epsilon_profile(" +
+                            "name TEXT PRIMARY KEY," +
+                            "value REAL NOT NULL" +
+                        ")"
+                );
                 seedEpsilonProfiles(connection);
-                statement.execute("PRAGMA user_version = " + SCHEMA_VERSION);
+                statement.execute(
+                    "PRAGMA user_version = " + SCHEMA_VERSION
+                );
                 connection.commit();
-            } catch (SQLException | RuntimeException e) {
+            } catch (UnsupportedDatabaseSchemaException e) {
+                connection.rollback();
+                throw e;
+            } catch (SQLException e) {
+                connection.rollback();
+                throw new DatabaseInitializationException();
+            } catch (RuntimeException e) {
                 connection.rollback();
                 throw e;
             }
+        } catch (UnsupportedDatabaseSchemaException e) {
+            throw e;
+        } catch (DatabaseConnectionException e) {
+            throw new DatabaseInitializationException();
+        } catch (SQLException e) {
+            throw new DatabaseInitializationException();
         }
     }
 
@@ -79,20 +115,26 @@ public final class Database {
      *
      * @param databasePath SQLite database file
      * @return an open database connection
-     * @throws SQLException if a connection cannot be opened
-     * @throws NullPointerException if databasePath is null
+     * @throws DatabaseConnectionException if a connection cannot be opened
      */
     public static Connection open(
             final Path databasePath
     )
-            throws SQLException,
-            NullPointerException
+            throws DatabaseConnectionException
     {
         Preconditions.checkNotNull(
-                databasePath,
-                "Database path must not be null"
+            databasePath,
+            "Database path must not be null"
         );
-        return DriverManager.getConnection("jdbc:sqlite:" + databasePath.toAbsolutePath());
+        Connection connection;
+        try {
+            connection = DriverManager.getConnection(
+                "jdbc:sqlite:" + databasePath.toAbsolutePath()
+            );
+        } catch (SQLException e) {
+            throw new DatabaseConnectionException();
+        }
+        return connection;
     }
 
     // Creates one matrix cell table when it is absent.
@@ -100,22 +142,34 @@ public final class Database {
             final Statement statement,
             final String table
     )
-            throws SQLException
+            throws DatabaseInitializationException
     {
-        statement.execute("CREATE TABLE IF NOT EXISTS " + table + " " +
-                "(row_index INTEGER NOT NULL, column_index INTEGER NOT NULL, " +
-                "value REAL NOT NULL, " +
-                "PRIMARY KEY (row_index, column_index))");
+        try {
+            statement.execute(
+                "CREATE TABLE IF NOT EXISTS " + table + "(" +
+                        "row_index INTEGER NOT NULL," +
+                        "column_index INTEGER NOT NULL," +
+                        "value REAL NOT NULL," +
+                        "PRIMARY KEY (row_index, column_index)" +
+                    ")"
+            );
+        } catch (SQLException e) {
+            throw new DatabaseInitializationException();
+        }
     }
 
     // Inserts default epsilon profiles without replacing existing values.
     private static void seedEpsilonProfiles(
             final Connection connection
     )
-            throws SQLException
+            throws DatabaseInitializationException
     {
-        try (PreparedStatement statement = connection.prepareStatement(
-                "INSERT OR IGNORE INTO epsilon_profile (name, value) VALUES (?, ?)")) {
+        try (
+            PreparedStatement statement = connection.prepareStatement(
+                "INSERT OR IGNORE INTO epsilon_profile(name, value) " +
+                    "VALUES (?, ?)"
+            )
+        ) {
             statement.setString(1, "strict");
             statement.setDouble(2, 1e-9);
             statement.addBatch();
@@ -126,6 +180,8 @@ public final class Database {
             statement.setDouble(2, 1e-3);
             statement.addBatch();
             statement.executeBatch();
+        } catch (SQLException e) {
+            throw new DatabaseInitializationException();
         }
     }
 }

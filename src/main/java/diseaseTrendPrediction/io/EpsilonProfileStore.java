@@ -2,6 +2,7 @@ package diseaseTrendPrediction.io;
 
 import com.google.common.base.Preconditions;
 import diseaseTrendPrediction.io.exceptions.EpsilonProfileNotFoundException;
+import diseaseTrendPrediction.io.exceptions.EpsilonProfileReadException;
 import diseaseTrendPrediction.io.transitionDataStorage.Database;
 
 import java.nio.file.Path;
@@ -19,14 +20,13 @@ public final class EpsilonProfileStore {
      * Creates an epsilon profile store for the supplied database.
      *
      * @param databasePath SQLite database file
-     * @throws NullPointerException if databasePath is null
      */
     public EpsilonProfileStore(
             final Path databasePath
     ) {
         Preconditions.checkNotNull(
-                databasePath,
-                "Database path must not be null"
+            databasePath,
+            "Database path must not be null"
         );
         this.databasePath = databasePath;
         checkEpsilonProfileStore();
@@ -37,40 +37,50 @@ public final class EpsilonProfileStore {
      *
      * @param profileName profile key
      * @return configured epsilon value
-     * @throws SQLException if the database query fails
+     * @throws EpsilonProfileReadException if the database query fails
      * @throws EpsilonProfileNotFoundException if the profile is not present
-     * @throws NullPointerException if profileName is null
      */
     public double load(
             final String profileName
     )
-            throws SQLException,
-            EpsilonProfileNotFoundException,
-            NullPointerException
+            throws EpsilonProfileReadException,
+            EpsilonProfileNotFoundException
     {
         checkEpsilonProfileStore();
         Preconditions.checkNotNull(
-                profileName,
-                "Profile name must not be null"
+            profileName,
+            "Profile name must not be null"
         );
-        try (Connection connection = Database.open(databasePath);
-             PreparedStatement statement = connection.prepareStatement(
-                     "SELECT value FROM epsilon_profile WHERE name = ?")) {
+        double value;
+        try (
+            Connection connection = Database.open(databasePath);
+            PreparedStatement statement = connection.prepareStatement(
+                "SELECT value FROM epsilon_profile " +
+                    "WHERE name = ?"
+            )
+        ) {
             statement.setString(1, profileName);
-            try (ResultSet result = statement.executeQuery()) {
+            try (
+                ResultSet result = statement.executeQuery()
+            ) {
                 if (!result.next()) {
                     throw new EpsilonProfileNotFoundException();
                 }
-                return result.getDouble("value");
+                value = result.getDouble("value");
             }
+        } catch (EpsilonProfileNotFoundException e) {
+            throw e;
+        } catch (SQLException e) {
+            throw new EpsilonProfileReadException();
         }
+        return value;
     }
 
     // Checks that this store has a usable database path.
     private void checkEpsilonProfileStore() {
         Preconditions.checkNotNull(
-                databasePath,
-                "Database path must not be null"
+            databasePath,
+            "Database path must not be null"
         );
     }
 }

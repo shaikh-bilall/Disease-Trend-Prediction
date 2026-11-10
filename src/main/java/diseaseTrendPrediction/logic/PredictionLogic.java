@@ -1,9 +1,9 @@
 package diseaseTrendPrediction.logic;
 
-import domain.Diagonalization;
-import domain.Exceptions.MatrixMultiplyDimMismatchException;
-import domain.Matrix;
-import domain.Vector;
+import linearAlgebra.domain.Diagonalization;
+import linearAlgebra.domain.Exceptions.MatrixMultiplyDimMismatchException;
+import linearAlgebra.domain.Matrix;
+import linearAlgebra.domain.Vector;
 
 import com.google.common.base.Preconditions;
 
@@ -14,7 +14,7 @@ import diseaseTrendPrediction.logic.exceptions.InvalidPredictionDiagonalizationS
 import diseaseTrendPrediction.logic.exceptions.NegativePredictionStepsException;
 import diseaseTrendPrediction.logic.exceptions.PredictionMatrixDimensionMismatchException;
 import diseaseTrendPrediction.logic.exceptions.UnstablePredictionDistributionException;
-import logic.MatrixLogic;
+import linearAlgebra.logic.MatrixLogic;
 
 /** Predicts future health-state distributions from a transition model. */
 public final class PredictionLogic {
@@ -35,13 +35,13 @@ public final class PredictionLogic {
             final double epsilon
     ) {
         Preconditions.checkNotNull(
-                diagonalization,
-                "Diagonalization must not be null"
+            diagonalization,
+            "Diagonalization must not be null"
         );
         Preconditions.checkArgument(
-                Double.isFinite(epsilon) &&
-                epsilon >= 0,
-                "Epsilon must be finite and non-negative"
+            Double.isFinite(epsilon) &&
+            epsilon >= 0,
+            "Epsilon must be finite and non-negative"
         );
         if (diagonalization.P().rows() != HealthState.values().length) {
             throw new InvalidPredictionDiagonalizationSizeException();
@@ -60,7 +60,6 @@ public final class PredictionLogic {
      * @param steps number of transitions to apply
      * @return prediction result
      * @throws NegativePredictionStepsException if steps is negative
-     * @throws IllegalStateException if the initial distribution is invalid
      * @throws PredictionMatrixDimensionMismatchException if matrices cannot be multiplied
      * @throws UnstablePredictionDistributionException if numerical correction exceeds epsilon
      */
@@ -69,25 +68,32 @@ public final class PredictionLogic {
             final int steps
     )
             throws NegativePredictionStepsException,
-            IllegalStateException,
             PredictionMatrixDimensionMismatchException,
             UnstablePredictionDistributionException
     {
         Preconditions.checkNotNull(
-                initial,
-                "Initial distribution must not be null"
+            initial,
+            "Initial distribution must not be null"
         );
         if (steps < 0) {
             throw new NegativePredictionStepsException();
         }
-        final StateVector start = new StateVector(initial, epsilon);
-        if (steps == 0) {
-            return new PredictionResult(0, start, start, start.mostLikelyStates());
-        }
 
-        final Vector computed = getTransitionPower(steps).multiply(start.vector());
-        final StateVector result = new StateVector(getWellDefined(computed), epsilon);
-        return new PredictionResult(steps, start, result, result.mostLikelyStates());
+        final StateVector start = new StateVector(initial, epsilon);
+        final PredictionResult result;
+        if (steps == 0) {
+            result = new PredictionResult(0, start, start, start.mostLikelyStates());
+        } else {
+            final Vector computed = getTransitionPower(steps).multiply(start.vector());
+            final StateVector prediction = new StateVector(getWellDefined(computed), epsilon);
+            result = new PredictionResult(
+                    steps,
+                    start,
+                    prediction,
+                    prediction.mostLikelyStates()
+            );
+        }
+        return result;
     }
     // Computes a transition matrix power for the requested number of steps.
     private Matrix getTransitionPower(
@@ -112,41 +118,41 @@ public final class PredictionLogic {
     private Vector getWellDefined(
             final Vector computed
     ) {
-        if (StateVector.isDistribution(computed, epsilon)) {
-            return computed;
-        }
+        Vector wellDefined = computed;
+        if (!StateVector.isDistribution(computed, epsilon)) {
+            double smallest = Double.POSITIVE_INFINITY;
+            double sum = 0;
+            for (int i = 0; i < computed.length(); i++) {
+                smallest = Math.min(smallest, computed.get(i));
+                sum += computed.get(i);
+            }
+            if (!(smallest >= -epsilon && Math.abs(sum - 1) <= epsilon)) {
+                throw new UnstablePredictionDistributionException();
+            }
 
-        double smallest = Double.POSITIVE_INFINITY;
-        double sum = 0;
-        for (int i = 0; i < computed.length(); i++) {
-            smallest = Math.min(smallest, computed.get(i));
-            sum += computed.get(i);
+            final double shift = Math.max(0, -smallest);
+            final double shiftedSum = sum + shift * computed.length();
+            final double[] entries = new double[computed.length()];
+            for (int i = 0; i < entries.length; i++) {
+                entries[i] = (computed.get(i) + shift) / shiftedSum;
+            }
+            wellDefined = new Vector(entries);
         }
-        if (!(smallest >= -epsilon && Math.abs(sum - 1) <= epsilon)) {
-            throw new UnstablePredictionDistributionException();
-        }
-
-        final double shift = Math.max(0, -smallest);
-        final double shiftedSum = sum + shift * computed.length();
-        final double[] entries = new double[computed.length()];
-        for (int i = 0; i < entries.length; i++) {
-            entries[i] = (computed.get(i) + shift) / shiftedSum;
-        }
-        return new Vector(entries);
+        return wellDefined;
     }
     // Checks that the prediction logic has valid dependencies.
     private void checkPredictionLogic() {
         Preconditions.checkState(
-                diagonalization != null,
-                "Diagonalization must be initialized"
+            diagonalization != null,
+            "Diagonalization must be initialized"
         );
         Preconditions.checkState(
-                diagonalization.P().rows() == HealthState.values().length,
-                "The diagonalization must have one row and column per health state"
+            diagonalization.P().rows() == HealthState.values().length,
+            "The diagonalization must have one row and column per health state"
         );
         Preconditions.checkState(
-                pLogic != null,
-                "Matrix logic for P must be initialized"
+            pLogic != null,
+            "Matrix logic for P must be initialized"
         );
     }
 

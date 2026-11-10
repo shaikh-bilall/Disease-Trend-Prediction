@@ -15,7 +15,8 @@ import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass
 public class RunAllTests {
 
     public static void main(String[] args) {
-        // Discovers every test class under this package, so tests added later are picked up automatically.
+        // Discovers every test class under this package,
+        // so tests added later are picked up automatically.
         LauncherDiscoveryRequest request = LauncherDiscoveryRequestBuilder.request()
                 .selectors(selectClasspathRoots(Set.of(Path.of("target/test-classes"))))
                 .build();
@@ -48,7 +49,11 @@ public class RunAllTests {
         System.out.printf("Skipped: %d%n", skipped);
         System.out.printf("Aborted: %d%n", aborted);
         System.out.printf("Time:    %d ms%n", millis);
-        System.out.println(failed == 0 && aborted == 0 ? "RESULT: ALL TESTS PASSED" : "RESULT: SOME TESTS FAILED");
+        System.out.println(
+                failed == 0 && aborted == 0 ?
+                "RESULT: ALL TESTS PASSED" :
+                "RESULT: SOME TESTS FAILED"
+        );
 
         System.exit(failed == 0 && aborted == 0 ? 0 : 1);
     }

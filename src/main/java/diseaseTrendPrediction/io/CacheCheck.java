@@ -16,21 +16,18 @@ public final class CacheCheck {
      * @param sourceTimestamp current source timestamp
      * @param snapshotTimestamp timestamp stored with the snapshot
      * @return whether both timestamps identify the same source version
-     * @throws NullPointerException if either timestamp is null
      */
     public static boolean isUpToDate(
             final Instant sourceTimestamp,
             final Instant snapshotTimestamp
-    )
-            throws NullPointerException
-    {
+    ) {
         Preconditions.checkNotNull(
-                sourceTimestamp,
-                "Source timestamp must not be null"
+            sourceTimestamp,
+            "Source timestamp must not be null"
         );
         Preconditions.checkNotNull(
-                snapshotTimestamp,
-                "Snapshot timestamp must not be null"
+            snapshotTimestamp,
+            "Snapshot timestamp must not be null"
         );
         return snapshotTimestamp.equals(sourceTimestamp);
     }

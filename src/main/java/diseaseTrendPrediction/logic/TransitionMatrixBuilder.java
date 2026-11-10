@@ -3,7 +3,7 @@ package diseaseTrendPrediction.logic;
 import com.google.common.base.Preconditions;
 import diseaseTrendPrediction.domain.HealthState;
 import diseaseTrendPrediction.domain.MarkovModel;
-import domain.Matrix;
+import linearAlgebra.domain.Matrix;
 import diseaseTrendPrediction.domain.PatientHistory;
 import diseaseTrendPrediction.logic.exceptions.EmptyPatientHistoriesException;
 
@@ -29,13 +29,13 @@ public final class TransitionMatrixBuilder {
             throws EmptyPatientHistoriesException
     {
         Preconditions.checkNotNull(
-                patientHistories,
-                "Patient histories must not be null"
+            patientHistories,
+            "Patient histories must not be null"
         );
         Preconditions.checkArgument(
-                Double.isFinite(epsilon) &&
-                epsilon >= 0,
-                "Epsilon must be finite and non-negative"
+            Double.isFinite(epsilon) &&
+            epsilon >= 0,
+            "Epsilon must be finite and non-negative"
         );
         if (patientHistories.isEmpty()) {
             throw new EmptyPatientHistoriesException();
@@ -57,8 +57,8 @@ public final class TransitionMatrixBuilder {
 
         for (PatientHistory history : patientHistories) {
             Preconditions.checkNotNull(
-                    history,
-                    "Patient history must not be null"
+                history,
+                "Patient history must not be null"
             );
 
             final List<HealthState> states = history.stateHistory();

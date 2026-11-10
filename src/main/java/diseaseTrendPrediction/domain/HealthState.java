@@ -1,5 +1,6 @@
 package diseaseTrendPrediction.domain;
 
+import com.google.common.base.Preconditions;
 import diseaseTrendPrediction.domain.exceptions.NullHealthStateLabelException;
 import diseaseTrendPrediction.domain.exceptions.UnknownHealthStateLabelException;
 import com.google.common.collect.Maps;
@@ -30,6 +31,7 @@ public enum HealthState {
      * @return state label
      */
     public String label() {
+        checkHealthState();
         return label;
     }
     /**
@@ -38,7 +40,16 @@ public enum HealthState {
      * @return state index
      */
     public int stateIndex() {
+        checkHealthState();
         return ordinal();
+    }
+
+    // Checks that this state has a label.
+    private void checkHealthState() {
+        Preconditions.checkNotNull(
+            label,
+            "Health state label must be initialized"
+        );
     }
     /**
      * Finds the health state represented by a label.

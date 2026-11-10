@@ -10,6 +10,7 @@ import diseaseTrendPrediction.io.exceptions.InvalidPatientIdException;
 import diseaseTrendPrediction.io.exceptions.InvalidPatientTimeSequenceException;
 import diseaseTrendPrediction.io.exceptions.InvalidPatientTimeStepException;
 import diseaseTrendPrediction.io.exceptions.MalformedPatientCsvRowException;
+import diseaseTrendPrediction.io.exceptions.PatientCsvReadException;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -53,23 +54,23 @@ public final class PatientCsvReader {
         // Checks that the row arrays can represent the declared row count.
         private void checkRows() {
             Preconditions.checkNotNull(
-                    groups,
-                    "Row groups must not be null"
+                groups,
+                "Row groups must not be null"
             );
             Preconditions.checkNotNull(
-                    steps,
-                    "Row steps must not be null"
+                steps,
+                "Row steps must not be null"
             );
             Preconditions.checkNotNull(
-                    states,
-                    "Row states must not be null"
+                states,
+                "Row states must not be null"
             );
             Preconditions.checkState(
-                    size >= 0 &&
-                    size <= groups.length &&
-                    size <= steps.length &&
-                    size <= states.length,
-                    "Row count must fit every row array"
+                size >= 0 &&
+                size <= groups.length &&
+                size <= steps.length &&
+                size <= states.length,
+                "Row count must fit every row array"
             );
         }
     }
@@ -79,30 +80,28 @@ public final class PatientCsvReader {
      *
      * @param csvPath source CSV path
      * @return histories read from the CSV
-     * @throws IOException if the CSV cannot be read
+     * @throws PatientCsvReadException if the CSV cannot be read
      * @throws InvalidPatientCsvHeaderException if the header is invalid
      * @throws MalformedPatientCsvRowException if a row is malformed
      * @throws InvalidPatientIdException if a patient identifier is invalid
      * @throws InvalidPatientTimeStepException if a time step is invalid
      * @throws InvalidPatientCsvStateException if a state label is unknown
      * @throws InvalidPatientTimeSequenceException if patient time steps are invalid
-     * @throws NullPointerException if csvPath is null
      */
     public static List<PatientHistory> read(
             final Path csvPath
     )
-            throws IOException,
+            throws PatientCsvReadException,
             InvalidPatientCsvHeaderException,
             MalformedPatientCsvRowException,
             InvalidPatientIdException,
             InvalidPatientTimeStepException,
             InvalidPatientCsvStateException,
-            InvalidPatientTimeSequenceException,
-            NullPointerException
+            InvalidPatientTimeSequenceException
     {
         Preconditions.checkNotNull(
-                csvPath,
-                "CSV path must not be null"
+            csvPath,
+            "CSV path must not be null"
         );
 
         final PatientIdIndex index = new PatientIdIndex();
@@ -117,7 +116,7 @@ public final class PatientCsvReader {
             final Path csvPath,
             final PatientIdIndex index
     )
-            throws IOException
+            throws PatientCsvReadException
     {
         int[] rowGroups = new int[INITIAL_ROWS];
         int[] rowSteps = new int[INITIAL_ROWS];
@@ -126,8 +125,11 @@ public final class PatientCsvReader {
 
         try (
             BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(Files.newInputStream(csvPath), StandardCharsets.UTF_8),
-                    BUFFER_SIZE
+                new InputStreamReader(
+                        Files.newInputStream(csvPath),
+                        StandardCharsets.UTF_8
+                ),
+                BUFFER_SIZE
             )
         ) {
             String line = reader.readLine();
@@ -162,6 +164,8 @@ public final class PatientCsvReader {
                 rowStates[size] = (byte) state.stateIndex();
                 size++;
             }
+        } catch (IOException e) {
+            throw new PatientCsvReadException();
         }
         return new Rows(rowGroups, rowSteps, rowStates, size);
     }

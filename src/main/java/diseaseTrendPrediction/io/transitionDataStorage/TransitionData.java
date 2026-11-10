@@ -1,8 +1,8 @@
 package diseaseTrendPrediction.io.transitionDataStorage;
 
 import com.google.common.base.Preconditions;
-import domain.Diagonalization;
-import domain.Matrix;
+import linearAlgebra.domain.Diagonalization;
+import linearAlgebra.domain.Matrix;
 
 import java.time.Instant;
 
@@ -28,16 +28,16 @@ public record TransitionData(
      */
     public TransitionData {
         Preconditions.checkNotNull(
-                transition,
-                "Transition matrix must not be null"
+            transition,
+            "Transition matrix must not be null"
         );
         Preconditions.checkNotNull(
-                diagonalization,
-                "Diagonalization must not be null"
+            diagonalization,
+            "Diagonalization must not be null"
         );
         Preconditions.checkNotNull(
-                sourceTimestamp,
-                "Source timestamp must not be null"
+            sourceTimestamp,
+            "Source timestamp must not be null"
         );
         transition = transition.copy();
         diagonalization = new Diagonalization(
@@ -55,6 +55,7 @@ public record TransitionData(
      */
     @Override
     public Matrix transition() {
+        checkTransitionData();
         return transition.copy();
     }
 
@@ -65,6 +66,7 @@ public record TransitionData(
      */
     @Override
     public Diagonalization diagonalization() {
+        checkTransitionData();
         return new Diagonalization(
                 diagonalization.P(),
                 diagonalization.D(),
@@ -72,19 +74,30 @@ public record TransitionData(
         );
     }
 
+    /**
+     * Returns the timestamp of the source used to build this snapshot.
+     *
+     * @return source file timestamp
+     */
+    @Override
+    public Instant sourceTimestamp() {
+        checkTransitionData();
+        return sourceTimestamp;
+    }
+
     // Checks that this snapshot contains all required values.
     private void checkTransitionData() {
         Preconditions.checkNotNull(
-                transition,
-                "Transition matrix must not be null"
+            transition,
+            "Transition matrix must not be null"
         );
         Preconditions.checkNotNull(
-                diagonalization,
-                "Diagonalization must not be null"
+            diagonalization,
+            "Diagonalization must not be null"
         );
         Preconditions.checkNotNull(
-                sourceTimestamp,
-                "Source timestamp must not be null"
+            sourceTimestamp,
+            "Source timestamp must not be null"
         );
     }
 }

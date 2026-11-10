@@ -27,9 +27,6 @@ public record PredictionResult(
      * @param initial starting distribution
      * @param result predicted distribution
      * @param mostLikelyStates states tied for the highest predicted probability
-     * @throws NullPointerException if a required value is null
-     * @throws IllegalArgumentException if the distributions use different tolerances
-     * @throws IllegalStateException if the result fields are inconsistent
      */
     public PredictionResult(
             final int steps,
@@ -38,20 +35,20 @@ public record PredictionResult(
             final List<HealthState> mostLikelyStates
     ) {
         Preconditions.checkNotNull(
-                initial,
-                "Initial distribution must not be null"
+            initial,
+            "Initial distribution must not be null"
         );
         Preconditions.checkNotNull(
-                result,
-                "Result distribution must not be null"
+            result,
+            "Result distribution must not be null"
         );
         Preconditions.checkNotNull(
-                mostLikelyStates,
-                "Most likely states must not be null"
+            mostLikelyStates,
+            "Most likely states must not be null"
         );
         Preconditions.checkArgument(
-                initial.epsilon() == result.epsilon(),
-                "Initial and result distributions must use the same epsilon"
+            initial.epsilon() == result.epsilon(),
+            "Initial and result distributions must use the same epsilon"
         );
 
         this.steps = steps;
@@ -69,6 +66,7 @@ public record PredictionResult(
      */
     @Override
     public StateVector initial() {
+        checkPredictionResult();
         return new StateVector(initial.vector(), initial.epsilon());
     }
 
@@ -79,6 +77,7 @@ public record PredictionResult(
      */
     @Override
     public StateVector result() {
+        checkPredictionResult();
         return new StateVector(result.vector(), result.epsilon());
     }
 
@@ -89,35 +88,47 @@ public record PredictionResult(
      */
     @Override
     public List<HealthState> mostLikelyStates() {
+        checkPredictionResult();
         return List.copyOf(new ArrayList<>(mostLikelyStates));
+    }
+
+    /**
+     * Returns the number of transitions applied to produce this result.
+     *
+     * @return number of prediction steps
+     */
+    @Override
+    public int steps() {
+        checkPredictionResult();
+        return steps;
     }
 
     // Checks that this prediction result is valid.
     private void checkPredictionResult() {
         Preconditions.checkNotNull(
-                initial,
-                "Initial distribution must not be null"
+            initial,
+            "Initial distribution must not be null"
         );
         Preconditions.checkNotNull(
-                result,
-                "Result distribution must not be null"
+            result,
+            "Result distribution must not be null"
         );
         Preconditions.checkNotNull(
-                mostLikelyStates,
-                "Most likely states must not be null"
+            mostLikelyStates,
+            "Most likely states must not be null"
         );
         Preconditions.checkState(
-                steps >= 0,
-                "Steps must be non-negative"
+            steps >= 0,
+            "Steps must be non-negative"
         );
         Preconditions.checkState(
-                mostLikelyStates.equals(result.mostLikelyStates()),
-                "states must be tied for the highest probability, in state order"
+            mostLikelyStates.equals(result.mostLikelyStates()),
+            "states must be tied for the highest probability, in state order"
         );
         Preconditions.checkState(
-                steps != 0 ||
-                initial.vector().equals(result.vector()),
-                "Initial and result distributions must match when steps are zero"
+            steps != 0 ||
+            initial.vector().equals(result.vector()),
+            "Initial and result distributions must match when steps are zero"
         );
     }
 

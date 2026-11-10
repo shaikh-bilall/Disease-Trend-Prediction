@@ -3,7 +3,7 @@ package diseaseTrendPrediction.io;
 import com.google.common.base.Preconditions;
 import diseaseTrendPrediction.domain.HealthState;
 import diseaseTrendPrediction.domain.StateVector;
-import domain.Vector;
+import linearAlgebra.domain.Vector;
 import diseaseTrendPrediction.domain.exceptions.UnknownHealthStateLabelException;
 import diseaseTrendPrediction.io.exceptions.DuplicateStateException;
 import diseaseTrendPrediction.io.exceptions.EmptyStateDescriptionException;
@@ -33,7 +33,6 @@ public final class StateParser {
      * @throws UnknownHealthStateLabelException if a state label is unknown
      * @throws DuplicateStateException if a state is listed more than once
      * @throws InvalidPercentageSumException if percentages do not sum to one
-     * @throws IllegalArgumentException if epsilon is invalid
      */
     public static StateVector parse(
             final String description,
@@ -44,16 +43,15 @@ public final class StateParser {
             MalformedStatePartException,
             UnknownHealthStateLabelException,
             DuplicateStateException,
-            InvalidPercentageSumException,
-            IllegalArgumentException
+            InvalidPercentageSumException
     {
         if (description == null) {
             throw new NullStateDescriptionException();
         }
         Preconditions.checkArgument(
-                Double.isFinite(epsilon) &&
-                epsilon >= 0,
-                "Epsilon must be finite and non-negative"
+            Double.isFinite(epsilon) &&
+            epsilon >= 0,
+            "Epsilon must be finite and non-negative"
         );
         if (description.isBlank()) {
             throw new EmptyStateDescriptionException();

@@ -16,11 +16,7 @@ final class PatientIdIndex {
     private int[] groupRowCounts;
     private int groups;
 
-    /**
-     * Creates an empty patient index.
-     *
-     * @throws IllegalStateException if the index invariants are not satisfied
-     */
+    /** Creates an empty patient index.*/
     public PatientIdIndex() {
         this.slotIds = new int[INITIAL_SLOTS];
         this.slotGroups = newEmptySlots(INITIAL_SLOTS);
@@ -35,16 +31,13 @@ final class PatientIdIndex {
      *
      * @param patientId patient identifier
      * @return index of the patient's group
-     * @throws IllegalArgumentException if the identifier is negative
      */
     public int add(
             final int patientId
-    )
-            throws IllegalArgumentException
-    {
+    ) {
         Preconditions.checkArgument(
-                patientId >= 0,
-                "Patient id must be non-negative"
+            patientId >= 0,
+            "Patient id must be non-negative"
         );
         final int mask = slotIds.length - 1;
         int slot = hash(patientId) & mask;
@@ -65,6 +58,7 @@ final class PatientIdIndex {
      * @return number of tracked patients
      */
     public int groups() {
+        checkPatientIdIndex();
         return groups;
     }
     /**
@@ -72,17 +66,15 @@ final class PatientIdIndex {
      *
      * @param group patient group index
      * @return patient identifier
-     * @throws IndexOutOfBoundsException if group is outside the tracked range
      */
     public int patientId(
             final int group
-    )
-            throws IndexOutOfBoundsException
-    {
+    ) {
+        checkPatientIdIndex();
         Preconditions.checkElementIndex(
-                group,
-                groups,
-                "Group"
+            group,
+            groups,
+            "Group"
         );
         return groupIds[group];
     }
@@ -91,43 +83,41 @@ final class PatientIdIndex {
      *
      * @param group patient group index
      * @return number of observations
-     * @throws IndexOutOfBoundsException if group is outside the tracked range
      */
     public int rowCount(
             final int group
-    )
-            throws IndexOutOfBoundsException
-    {
+    ) {
+        checkPatientIdIndex();
         Preconditions.checkElementIndex(
-                group,
-                groups,
-                "Group"
+            group,
+            groups,
+            "Group"
         );
         return groupRowCounts[group];
     }
     // Checks the index's internal array and capacity invariants.
     private void checkPatientIdIndex() {
         Preconditions.checkState(
-                slotIds.length == slotGroups.length,
-                "Patient id and group tables must have equal lengths"
+            slotIds.length == slotGroups.length,
+            "Patient id and group tables must have equal lengths"
         );
         Preconditions.checkState(
-                slotIds.length > 0 &&
-                (slotIds.length & (slotIds.length - 1)) == 0,
-                "Patient table size must be a positive power of two"
+            slotIds.length > 0 &&
+            (slotIds.length & (slotIds.length - 1)) == 0,
+            "Patient table size must be a positive power of two"
         );
         Preconditions.checkState(
-                groups >= 0 &&
-                groups <= groupIds.length,
-                "Patient group count must fit its id table"
+            groups >= 0 &&
+            groups <= groupIds.length,
+            "Patient group count must fit its id table"
         );
         Preconditions.checkState(
-                groups <= groupRowCounts.length,
-                "Patient group count must fit its row-count table"
+            groups <= groupRowCounts.length,
+            "Patient group count must fit its row-count table"
         );
         Preconditions.checkState(
-                groups * 2 <= slotIds.length,
-                "Patient table must remain at most half full"
+            groups * 2 <= slotIds.length,
+            "Patient table must remain at most half full"
         );
     }
     // Registers a new patient in the index.

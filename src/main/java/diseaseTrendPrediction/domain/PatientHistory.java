@@ -21,16 +21,14 @@ public record PatientHistory(
      *
      * @param patientId patient identifier
      * @param stateHistory observed states in time order
-     * @throws NullPointerException if stateHistory is null
-     * @throws IllegalStateException if the identifier or history is invalid
      */
     public PatientHistory(
             final int patientId,
             final List<HealthState> stateHistory
     ) {
         Preconditions.checkNotNull(
-                stateHistory,
-                "State history must not be null"
+            stateHistory,
+            "State history must not be null"
         );
 
         this.patientId = patientId;
@@ -46,22 +44,23 @@ public record PatientHistory(
      */
     @Override
     public List<HealthState> stateHistory() {
+        checkPatientHistory();
         return List.copyOf(new ArrayList<>(stateHistory));
     }
 
     // Checks that this patient history is valid.
     private void checkPatientHistory() {
         Preconditions.checkNotNull(
-                stateHistory,
-                "State history must not be null"
+            stateHistory,
+            "State history must not be null"
         );
         Preconditions.checkState(
-                patientId >= 0,
-                "Patient id must be non-negative"
+            patientId >= 0,
+            "Patient id must be non-negative"
         );
         Preconditions.checkState(
-                !stateHistory.isEmpty(),
-                "State history must have at least one entry"
+            !stateHistory.isEmpty(),
+            "State history must have at least one entry"
         );
     }
 
